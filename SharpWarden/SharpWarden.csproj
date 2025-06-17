@@ -6,6 +6,9 @@
     <RootNamespace>SharpWarden</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
+	<PackageId>SharpWarden</PackageId>
+	<Version>0.1.0</Version>
+	<Authors>Nemirtingas</Authors>
   </PropertyGroup>
 
   <ItemGroup>
