@@ -133,7 +133,7 @@ static class BitWardenCipherService
         return $"2.{Convert.ToBase64String(iv)}|{Convert.ToBase64String(ciphertext)}|{Convert.ToBase64String(mac)}";
     }
 
-    public static byte[] DecryptWithRSA(string cipherString, byte[] privateKeyDer)
+    public static byte[] DecryptWithRSAKey(string cipherString, byte[] privateKeyDer)
     {
         string[] parts = cipherString.Split('.', 2);
 
@@ -155,15 +155,15 @@ static class BitWardenCipherService
 
     public static string DecryptStringWithRSA(string cipherString, byte[] privateKeyDer)
     {
-        return Encoding.UTF8.GetString(DecryptWithRSA(cipherString, privateKeyDer));
+        return Encoding.UTF8.GetString(DecryptWithRSAKey(cipherString, privateKeyDer));
     }
     
     public static string EncryptStringWithRSA(string plainText, byte[] publicKeyDer)
     {
-        return EncryptWithRSA(Encoding.UTF8.GetBytes(plainText), publicKeyDer);
+        return EncryptWithRSAKey(Encoding.UTF8.GetBytes(plainText), publicKeyDer);
     }
 
-    public static string EncryptWithRSA(byte[] plainBytes, byte[] publicKeyDer)
+    public static string EncryptWithRSAKey(byte[] plainBytes, byte[] publicKeyDer)
     {
         AsymmetricKeyParameter publicKey = PublicKeyFactory.CreateKey(publicKeyDer);
         IAsymmetricBlockCipher engine = new OaepEncoding(new RsaEngine());

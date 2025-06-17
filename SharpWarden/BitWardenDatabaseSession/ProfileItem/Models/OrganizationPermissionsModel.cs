@@ -1,63 +1,42 @@
+using Newtonsoft.Json;
+
 namespace SharpWarden.BitWardenDatabaseSession.ProfileItem.Models;
 
 public class OrganizationPermissionsModel
 {
-    public OrganizationPermissionsModel(BitWardenDatabase.ProfileItem.Models.OrganizationPermissionsModel databaseModel)
-    {
-        AccessEventLogs = databaseModel.AccessEventLogs;
-        AccessImportExport = databaseModel.AccessImportExport;
-        AccessReports = databaseModel.AccessReports;
-        CreateNewCollections = databaseModel.CreateNewCollections;
-        DeleteAnyCollection = databaseModel.DeleteAnyCollection;
-        EditAnyCollection = databaseModel.EditAnyCollection;
-        ManageGroups = databaseModel.ManageGroups;
-        ManagePolicies = databaseModel.ManagePolicies;
-        ManageResetPassword = databaseModel.ManageResetPassword;
-        ManageSCIM = databaseModel.ManageSCIM;
-        ManageSSO = databaseModel.ManageSSO;
-        ManageUsers = databaseModel.ManageUsers;
-    }
-
+    [JsonProperty("accessEventLogs")]
     public bool AccessEventLogs { get; set; }
 
+    [JsonProperty("accessImportExport")]
     public bool AccessImportExport { get; set; }
 
+    [JsonProperty("accessReports")]
     public bool AccessReports { get; set; }
 
+    [JsonProperty("createNewCollections")]
     public bool CreateNewCollections { get; set; }
 
+    [JsonProperty("deleteAnyCollection")]
     public bool DeleteAnyCollection { get; set; }
 
+    [JsonProperty("editAnyCollection")]
     public bool EditAnyCollection { get; set; }
 
+    [JsonProperty("manageGroups")]
     public bool ManageGroups { get; set; }
 
+    [JsonProperty("managePolicies")]
     public bool ManagePolicies { get; set; }
 
+    [JsonProperty("manageResetPassword")]
     public bool ManageResetPassword { get; set; }
 
+    [JsonProperty("manageScim")]
     public bool ManageSCIM { get; set; }
 
+    [JsonProperty("manageSso")]
     public bool ManageSSO { get; set; }
 
+    [JsonProperty("manageUsers")]
     public bool ManageUsers { get; set; }
-
-    public BitWardenDatabase.ProfileItem.Models.OrganizationPermissionsModel ToDatabaseModel()
-    {
-        return new BitWardenDatabase.ProfileItem.Models.OrganizationPermissionsModel
-        {
-            AccessEventLogs = AccessEventLogs,
-            AccessImportExport = AccessImportExport,
-            AccessReports = AccessReports,
-            CreateNewCollections = CreateNewCollections,
-            DeleteAnyCollection = DeleteAnyCollection,
-            EditAnyCollection = EditAnyCollection,
-            ManageGroups = ManageGroups,
-            ManagePolicies = ManagePolicies,
-            ManageResetPassword = ManageResetPassword,
-            ManageSCIM = ManageSCIM,
-            ManageSSO = ManageSSO,
-            ManageUsers = ManageUsers,
-        };
-    }
 }

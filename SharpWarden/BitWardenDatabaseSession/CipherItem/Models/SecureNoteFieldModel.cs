@@ -1,20 +1,10 @@
-namespace SharpWarden.BitWardenDatabaseSession.CipherItem.Models;
+using Newtonsoft.Json;
 
+namespace SharpWarden.BitWardenDatabaseSession.CipherItem.Models;
 
 public class SecureNoteFieldModel
 {
-    public SecureNoteFieldModel(DatabaseSession databaseSession, Guid? organizationId, BitWardenDatabase.CipherItem.Models.SecureNoteFieldModel databaseModel)
-    {
-        Type = databaseModel.Type;
-    }
-
-    public int Type { get; }
-
-    public BitWardenDatabase.CipherItem.Models.SecureNoteFieldModel ToDatabaseModel()
-    {
-        return new BitWardenDatabase.CipherItem.Models.SecureNoteFieldModel
-        {
-            Type = Type,
-        };
-    }
+    // Always 0? The not is stored in the 'notes' field in the item.
+    [JsonProperty("type")]
+    public int Type { get; set; }
 }

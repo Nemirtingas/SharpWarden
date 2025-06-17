@@ -1,229 +1,163 @@
-using SharpWarden.BitWardenDatabase;
+using Newtonsoft.Json;
 
 namespace SharpWarden.BitWardenDatabaseSession.ProfileItem.Models;
 
 public class OrganizationModel
 {
-    public OrganizationModel(BitWardenDatabase.ProfileItem.Models.OrganizationModel databaseModel)
-    {
-        AccessSecretsManager = databaseModel.AccessSecretsManager;
-        AllowAdminAccessToAllCollectionItems = databaseModel.AllowAdminAccessToAllCollectionItems;
-        Enabled = databaseModel.Enabled;
-        FamilySponsorshipAvailable = databaseModel.FamilySponsorshipAvailable;
-        FamilySponsorshipFriendlyName = databaseModel.FamilySponsorshipFriendlyName;
-        FamilySponsorshipLastSyncDate = databaseModel.FamilySponsorshipLastSyncDate;
-        FamilySponsorshipToDelete = databaseModel.FamilySponsorshipToDelete;
-        FamilySponsorshipValidUntil = databaseModel.FamilySponsorshipValidUntil;
-        HasPublicAndPrivateKeys = databaseModel.HasPublicAndPrivateKeys;
-        Id = databaseModel.Id;
-        Identifier = databaseModel.Identifier;
-        _Key = databaseModel.Key;
-        KeyConnectorEnabled = databaseModel.KeyConnectorEnabled;
-        KeyConnectorUrl = databaseModel.KeyConnectorUrl;
-        LimitCollectionCreation = databaseModel.LimitCollectionCreation;
-        LimitCollectionCreationDeletion = databaseModel.LimitCollectionCreationDeletion;
-        LimitCollectionDeletion = databaseModel.LimitCollectionDeletion;
-        MaxCollections = databaseModel.MaxCollections;
-        MaxStorageGb = databaseModel.MaxStorageGb;
-        Name = databaseModel.Name;
-        OrganizationUserId = databaseModel.OrganizationUserId;
-        Permissions = databaseModel.Permissions == null ? null : new OrganizationPermissionsModel(databaseModel.Permissions);
-        PlanProductType = databaseModel.PlanProductType;
-        ProductTierType = databaseModel.ProductTierType;
-        ProviderId = databaseModel.ProviderId;
-        ProviderName = databaseModel.ProviderName;
-        ProviderType = databaseModel.ProviderType;
-        ResetPasswordEnrolled = databaseModel.ResetPasswordEnrolled;
-        Seats = databaseModel.Seats;
-        SelfHost = databaseModel.SelfHost;
-        SSOBound = databaseModel.SSOBound;
-        Status = databaseModel.Status;
-        Type = databaseModel.Type;
-        Use2FA = databaseModel.Use2FA;
-        UseActivateAutofillPolicy = databaseModel.UseActivateAutofillPolicy;
-        UseAPI = databaseModel.UseAPI;
-        UseCustomPermissions = databaseModel.UseCustomPermissions;
-        UseDirectory = databaseModel.UseDirectory;
-        UseEvents = databaseModel.UseEvents;
-        UseGroups = databaseModel.UseGroups;
-        UseKeyConnector = databaseModel.UseKeyConnector;
-        UsePasswordManager = databaseModel.UsePasswordManager;
-        UsePolicies = databaseModel.UsePolicies;
-        UseResetPassword = databaseModel.UseResetPassword;
-        UseSCIM = databaseModel.UseSCIM;
-        UseSecretsManager = databaseModel.UseSecretsManager;
-        UseSSO = databaseModel.UseSSO;
-        UseTOTP = databaseModel.UseTOTP;
-        UserId = databaseModel.UserId;
-        UserIsManagedByOrganization = databaseModel.UserIsManagedByOrganization;
-        UsersGetPremium = databaseModel.UsersGetPremium;
-    }
-
+    [JsonProperty("accessSecretsManager")]
     public bool AccessSecretsManager { get; set; }
 
+    [JsonProperty("allowAdminAccessToAllCollectionItems")]
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
 
+    [JsonProperty("enabled")]
     public bool Enabled { get; set; }
 
+    [JsonProperty("familySponsorshipAvailable")]
     public bool FamilySponsorshipAvailable { get; set; }
 
+    [JsonProperty("familySponsorshipFriendlyName")]
     public string FamilySponsorshipFriendlyName { get; set; }
 
+    [JsonProperty("familySponsorshipLastSyncDate")]
     public DateTimeOffset? FamilySponsorshipLastSyncDate { get; set; }
 
+    [JsonProperty("familySponsorshipToDelete")]
     public bool? FamilySponsorshipToDelete { get; set; }
 
+    [JsonProperty("familySponsorshipValidUntil")]
     public DateTimeOffset? FamilySponsorshipValidUntil { get; set; }
 
+    [JsonProperty("hasPublicAndPrivateKeys")]
     public bool HasPublicAndPrivateKeys { get; set; }
 
+    [JsonProperty("id")]
     public Guid Id { get; set; }
 
+    [JsonProperty("identifier")]
     public string Identifier { get; set; }
 
-    private string _Key;
-    public string Key
-    {
-        get => _Key;
-        set => throw new NotImplementedException();
-    }
+    [JsonProperty("key")]
+    // Probably a crypted string
+    public string Key { get; set; }
 
+    [JsonProperty("keyConnectorEnabled")]
     public bool KeyConnectorEnabled { get; set; }
 
+    [JsonProperty("keyConnectorUrl")]
     public string KeyConnectorUrl { get; set; }
 
+    [JsonProperty("limitCollectionCreation")]
     public bool LimitCollectionCreation { get; set; }
 
+    [JsonProperty("limitCollectionCreationDeletion")]
     public bool LimitCollectionCreationDeletion { get; set; }
 
+    [JsonProperty("limitCollectionDeletion")]
     public bool LimitCollectionDeletion { get; set; }
 
+    [JsonProperty("maxCollections")]
     public int? MaxCollections { get; set; }
 
+    [JsonProperty("maxStorageGb")]
     public int MaxStorageGb { get; set; }
 
+    [JsonProperty("name")]
     public string Name { get; set; }
 
-    public ObjectType ObjectType { get; } = ObjectType.ProfileOrganization;
+    [JsonProperty("object")]
+    public ObjectType ObjectType { get; set; } = ObjectType.ProfileOrganization;
 
+    [JsonProperty("organizationUserId")]
     public Guid OrganizationUserId { get; set; }
 
+    [JsonProperty("permissions")]
     public OrganizationPermissionsModel Permissions { get; set; }
 
+    [JsonProperty("planProductType")]
     public int PlanProductType { get; set; }
 
+    [JsonProperty("productTierType")]
     public int ProductTierType { get; set; }
 
+    [JsonProperty("providerId")]
     public Guid? ProviderId { get; set; }
 
+    [JsonProperty("providerName")]
     public string ProviderName { get; set; }
 
+    [JsonProperty("providerType")]
     public int? ProviderType { get; set; }
 
+    [JsonProperty("resetPasswordEnrolled")]
     public bool ResetPasswordEnrolled { get; set; }
 
+    [JsonProperty("seats")]
     public object Seats { get; set; }
 
+    [JsonProperty("selfHost")]
     public bool SelfHost { get; set; }
 
+    [JsonProperty("SsoBound")]
     public bool SSOBound { get; set; }
 
+    [JsonProperty("status")]
     public int Status { get; set; }
 
+    [JsonProperty("type")]
     public int Type { get; set; }
 
+    [JsonProperty("use2fa")]
     public bool Use2FA { get; set; }
 
+    [JsonProperty("useActivateAutofillPolicy")]
     public bool UseActivateAutofillPolicy { get; set; }
 
+    [JsonProperty("useApi")]
     public bool UseAPI { get; set; }
 
+    [JsonProperty("useCustomPermissions")]
     public bool UseCustomPermissions { get; set; }
 
+    [JsonProperty("useDirectory")]
     public bool UseDirectory { get; set; }
 
+    [JsonProperty("useEvents")]
     public bool UseEvents { get; set; }
 
+    [JsonProperty("useGroups")]
     public bool UseGroups { get; set; }
 
+    [JsonProperty("useKeyConnector")]
     public bool UseKeyConnector { get; set; }
 
+    [JsonProperty("usePasswordManager")]
     public bool UsePasswordManager { get; set; }
 
+    [JsonProperty("usePolicies")]
     public bool UsePolicies { get; set; }
 
+    [JsonProperty("useResetPassword")]
     public bool UseResetPassword { get; set; }
 
+    [JsonProperty("useScim")]
     public bool UseSCIM { get; set; }
 
+    [JsonProperty("useSecretsManager")]
     public bool UseSecretsManager { get; set; }
 
+    [JsonProperty("useSso")]
     public bool UseSSO { get; set; }
 
+    [JsonProperty("useTotp")]
     public bool UseTOTP { get; set; }
 
+    [JsonProperty("userId")]
     public Guid UserId { get; set; }
 
+    [JsonProperty("userIsManagedByOrganization")]
     public bool UserIsManagedByOrganization { get; set; }
 
+    [JsonProperty("usersGetPremium")]
     public bool UsersGetPremium { get; set; }
-    
-    public BitWardenDatabase.ProfileItem.Models.OrganizationModel ToDatabaseModel()
-    {
-        return new BitWardenDatabase.ProfileItem.Models.OrganizationModel
-        {
-            AccessSecretsManager = AccessSecretsManager,
-            AllowAdminAccessToAllCollectionItems = AllowAdminAccessToAllCollectionItems,
-            Enabled = Enabled,
-            FamilySponsorshipAvailable = FamilySponsorshipAvailable,
-            FamilySponsorshipFriendlyName = FamilySponsorshipFriendlyName,
-            FamilySponsorshipLastSyncDate = FamilySponsorshipLastSyncDate,
-            FamilySponsorshipToDelete = FamilySponsorshipToDelete,
-            FamilySponsorshipValidUntil = FamilySponsorshipValidUntil,
-            HasPublicAndPrivateKeys = HasPublicAndPrivateKeys,
-            Id = Id,
-            Identifier = Identifier,
-            Key = _Key,
-            KeyConnectorEnabled = KeyConnectorEnabled,
-            KeyConnectorUrl = KeyConnectorUrl,
-            LimitCollectionCreation = LimitCollectionCreation,
-            LimitCollectionCreationDeletion = LimitCollectionCreationDeletion,
-            LimitCollectionDeletion = LimitCollectionDeletion,
-            MaxCollections = MaxCollections,
-            MaxStorageGb = MaxStorageGb,
-            Name = Name,
-            ObjectType = ObjectType,
-            OrganizationUserId = OrganizationUserId,
-            Permissions = Permissions?.ToDatabaseModel(),
-            PlanProductType = PlanProductType,
-            ProductTierType = ProductTierType,
-            ProviderId = ProviderId,
-            ProviderName = ProviderName,
-            ProviderType = ProviderType,
-            ResetPasswordEnrolled = ResetPasswordEnrolled,
-            Seats = Seats,
-            SelfHost = SelfHost,
-            SSOBound = SSOBound,
-            Status = Status,
-            Type = Type,
-            Use2FA = Use2FA,
-            UseActivateAutofillPolicy = UseActivateAutofillPolicy,
-            UseAPI = UseAPI,
-            UseCustomPermissions = UseCustomPermissions,
-            UseDirectory = UseDirectory,
-            UseEvents = UseEvents,
-            UseGroups = UseGroups,
-            UseKeyConnector = UseKeyConnector,
-            UsePasswordManager = UsePasswordManager,
-            UsePolicies = UsePolicies,
-            UseResetPassword = UseResetPassword,
-            UseSCIM = UseSCIM,
-            UseSecretsManager = UseSecretsManager,
-            UseSSO = UseSSO,
-            UseTOTP = UseTOTP,
-            UserId = UserId,
-            UserIsManagedByOrganization = UserIsManagedByOrganization,
-            UsersGetPremium = UsersGetPremium,
-        };
-    }
-  }
+}

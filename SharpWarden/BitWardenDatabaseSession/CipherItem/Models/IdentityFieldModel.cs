@@ -1,181 +1,118 @@
+using Newtonsoft.Json;
+using SharpWarden.BitWardenDatabaseSession.Models;
+
 namespace SharpWarden.BitWardenDatabaseSession.CipherItem.Models;
 
-public class IdentityFieldModel
+public class IdentityFieldModel : IDatabaseSessionModel
 {
     private DatabaseSession _DatabaseSession;
     private Guid? _OrganizationId;
 
-    public IdentityFieldModel(DatabaseSession databaseSession, Guid? organizationId, BitWardenDatabase.CipherItem.Models.IdentityFieldModel databaseModel)
+    public IdentityFieldModel(DatabaseSession databaseSession)
+    {
+        SetDatabaseSession(databaseSession);
+    }
+
+    public bool HasSession() => _DatabaseSession != null;
+
+    public void SetDatabaseSession(DatabaseSession databaseSession)
+    {
+        _DatabaseSession = databaseSession;
+
+        Address1 = new EncryptedString(Address1.CipherString, databaseSession);
+        Address2 = new EncryptedString(Address2.CipherString, databaseSession);
+        Address3 = new EncryptedString(Address3.CipherString, databaseSession);
+        City = new EncryptedString(City.CipherString, databaseSession);
+        Company = new EncryptedString(Company.CipherString, databaseSession);
+        Country = new EncryptedString(Country.CipherString, databaseSession);
+        Email = new EncryptedString(Email.CipherString, databaseSession);
+        FirstName = new EncryptedString(FirstName.CipherString, databaseSession);
+        LastName = new EncryptedString(LastName.CipherString, databaseSession);
+        LicenseNumber = new EncryptedString(LicenseNumber.CipherString, databaseSession);
+        MiddleName = new EncryptedString(MiddleName.CipherString, databaseSession);
+        PassportNumber = new EncryptedString(PassportNumber.CipherString, databaseSession);
+        Phone = new EncryptedString(Phone.CipherString, databaseSession);
+        PostalCode = new EncryptedString(PostalCode.CipherString, databaseSession);
+        SSN = new EncryptedString(SSN.CipherString, databaseSession);
+        State = new EncryptedString(State.CipherString, databaseSession);
+        Title = new EncryptedString(Title.CipherString, databaseSession);
+    }
+
+    public void SetDatabaseSession(DatabaseSession databaseSession, Guid? organizationId)
     {
         _DatabaseSession = databaseSession;
         _OrganizationId = organizationId;
 
-        _Address1 = databaseModel.Address1;
-        _Address2 = databaseModel.Address2;
-        _Address3 = databaseModel.Address3;
-        _City = databaseModel.City;
-        _Company = databaseModel.Company;
-        _Country = databaseModel.Country;
-        _Email = databaseModel.Email;
-        _FirstName = databaseModel.FirstName;
-        _LastName = databaseModel.LastName;
-        _LicenseNumber = databaseModel.LicenseNumber;
-        _MiddleName = databaseModel.MiddleName;
-        _PassportNumber = databaseModel.PassportNumber;
-        _Phone = databaseModel.Phone;
-        _PostalCode = databaseModel.PostalCode;
-        _SSN = databaseModel.SSN;
-        _State = databaseModel.SSN;
-        _Title = databaseModel.Title;
+        Address1 = new EncryptedString(Address1.CipherString, databaseSession, _OrganizationId);
+        Address2 = new EncryptedString(Address2.CipherString, databaseSession, _OrganizationId);
+        Address3 = new EncryptedString(Address3.CipherString, databaseSession, _OrganizationId);
+        City = new EncryptedString(City.CipherString, databaseSession, _OrganizationId);
+        Company = new EncryptedString(Company.CipherString, databaseSession, _OrganizationId);
+        Country = new EncryptedString(Country.CipherString, databaseSession, _OrganizationId);
+        Email = new EncryptedString(Email.CipherString, databaseSession, _OrganizationId);
+        FirstName = new EncryptedString(FirstName.CipherString, databaseSession, _OrganizationId);
+        LastName = new EncryptedString(LastName.CipherString, databaseSession, _OrganizationId);
+        LicenseNumber = new EncryptedString(LicenseNumber.CipherString, databaseSession, _OrganizationId);
+        MiddleName = new EncryptedString(MiddleName.CipherString, databaseSession, _OrganizationId);
+        PassportNumber = new EncryptedString(PassportNumber.CipherString, databaseSession, _OrganizationId);
+        Phone = new EncryptedString(Phone.CipherString, databaseSession, _OrganizationId);
+        PostalCode = new EncryptedString(PostalCode.CipherString, databaseSession, _OrganizationId);
+        SSN = new EncryptedString(SSN.CipherString, databaseSession, _OrganizationId);
+        State = new EncryptedString(State.CipherString, databaseSession, _OrganizationId);
+        Title = new EncryptedString(Title.CipherString, databaseSession, _OrganizationId);
     }
 
-    private string _Address1;
-    public string Address1
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _Address1);
-        set => _Address1 = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("address1")]
+    public EncryptedString Address1 { get; set; }
 
-    private string _Address2;
-    public string Address2
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _Address2);
-        set => _Address2 = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("address2")]
+    public EncryptedString Address2 { get; set; }
 
-    private string _Address3;
-    public string Address3
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _Address3);
-        set => _Address3 = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("address3")]
+    public EncryptedString Address3 { get; set; }
 
-    private string _City;
-    public string City
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _City);
-        set => _City = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("city")]
+    public EncryptedString City { get; set; }
 
-    private string _Company;
-    public string Company
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _Company);
-        set => _Company = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("company")]
+    public EncryptedString Company { get; set; }
 
-    private string _Country;
-    public string Country
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _Country);
-        set => _Country = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("country")]
+    public EncryptedString Country { get; set; }
 
-    private string _Email;
-    public string Email
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _Email);
-        set => _Email = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("email")]
+    public EncryptedString Email { get; set; }
 
-    private string _FirstName;
-    public string FirstName
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _FirstName);
-        set => _FirstName = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("firstName")]
+    public EncryptedString FirstName { get; set; }
 
-    private string _LastName;
-    public string LastName
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _LastName);
-        set => _LastName = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("lastName")]
+    public EncryptedString LastName { get; set; }
 
-    private string _LicenseNumber;
-    public string LicenseNumber
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _LicenseNumber);
-        set => _LicenseNumber = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("licenseNumber")]
+    public EncryptedString LicenseNumber { get; set; }
 
-    private string _MiddleName;
-    public string MiddleName
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _MiddleName);
-        set => _MiddleName = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("middleName")]
+    public EncryptedString MiddleName { get; set; }
 
-    private string _PassportNumber;
-    public string PassportNumber
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _PassportNumber);
-        set => _PassportNumber = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("passportNumber")]
+    public EncryptedString PassportNumber { get; set; }
 
-    private string _Phone;
-    public string Phone
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _Phone);
-        set => _Phone = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("phone")]
+    public EncryptedString Phone { get; set; }
 
-    private string _PostalCode;
-    public string PostalCode
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _PostalCode);
-        set => _PostalCode = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("postalCode")]
+    public EncryptedString PostalCode { get; set; }
 
-    private string _SSN;
-    public string SSN
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _SSN);
-        set => _SSN = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("ssn")]
+    public EncryptedString SSN { get; set; }
 
-    private string _State;
-    public string State
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _State);
-        set => _State = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("state")]
+    public EncryptedString State { get; set; }
 
-    private string _Title;
-    public string Title
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _Title);
-        set => _Title = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("title")]
+    public EncryptedString Title { get; set; }
 
-    private string _Username;
-    public string Username
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _Username);
-        set => _Username = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
-
-    public BitWardenDatabase.CipherItem.Models.IdentityFieldModel ToDatabaseModel()
-    {
-        return new BitWardenDatabase.CipherItem.Models.IdentityFieldModel
-        {
-            Address1 = _Address1,
-            Address2 = _Address2,
-            Address3 = _Address3,
-            City = _City,
-            Company = _Company,
-            Country = _Country,
-            Email = _Email,
-            FirstName = _FirstName,
-            LastName = _LastName,
-            LicenseNumber = _LicenseNumber,
-            MiddleName = _MiddleName,
-            PassportNumber = _PassportNumber,
-            Phone = _Phone,
-            PostalCode = _PostalCode,
-            SSN = _SSN,
-            State = _SSN,
-            Title = _Title,
-        };
-    }
+    [JsonProperty("username")]
+    public EncryptedString Username { get; set; }
 }

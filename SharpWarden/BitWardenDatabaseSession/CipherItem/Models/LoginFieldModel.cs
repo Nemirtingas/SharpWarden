@@ -1,66 +1,67 @@
+using Newtonsoft.Json;
+using SharpWarden.BitWardenDatabaseSession.Models;
+
 namespace SharpWarden.BitWardenDatabaseSession.CipherItem.Models;
 
-public class LoginFieldModel
+public class LoginFieldModel : IDatabaseSessionModel
 {
     private DatabaseSession _DatabaseSession;
     private Guid? _OrganizationId;
 
-    public LoginFieldModel(DatabaseSession databaseSession, Guid? organizationId, BitWardenDatabase.CipherItem.Models.LoginFieldModel databaseModel)
+    public LoginFieldModel(DatabaseSession databaseSession)
+    {
+        SetDatabaseSession(databaseSession);
+    }
+
+    public bool HasSession() => _DatabaseSession != null;
+
+    public void SetDatabaseSession(DatabaseSession databaseSession)
+    {
+        _DatabaseSession = databaseSession;
+
+        Password = new EncryptedString(Password.CipherString, databaseSession);
+        Uri = new EncryptedString(Uri.CipherString, databaseSession);
+
+        if (Uris != null)
+            foreach (var uri in Uris)
+                uri.SetDatabaseSession(_DatabaseSession);
+
+        Username = new EncryptedString(Username.CipherString, databaseSession);
+    }
+
+    public void SetDatabaseSession(DatabaseSession databaseSession, Guid? organizationId)
     {
         _DatabaseSession = databaseSession;
         _OrganizationId = organizationId;
 
-        AutoFillOnPageLoad = databaseModel.AutoFillOnPageLoad;
-        _Password = databaseModel.Password;
-        PasswordRevisionDate = databaseModel.PasswordRevisionDate;
-        TOTP = databaseModel.TOTP;
-        _Uri = databaseModel.Uri;
-        if (databaseModel.Uris != null)
-            Uris = new List<UrlModel>(databaseModel.Uris.Select(e => new UrlModel(databaseSession, organizationId, e)));
+        Password = new EncryptedString(Password.CipherString, _DatabaseSession, _OrganizationId);
+        Uri = new EncryptedString(Uri.CipherString, _DatabaseSession, _OrganizationId);
 
-        _Username = databaseModel.Username;
+        if (Uris != null)
+            foreach (var uri in Uris)
+                uri.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+
+        Username = new EncryptedString(Username.CipherString, _DatabaseSession, _OrganizationId);
     }
 
+    [JsonProperty("autofillOnPageLoad")]
     public bool? AutoFillOnPageLoad { get; set; }
 
-    private string _Password;
-    public string Password
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _Password);
-        set => _Password = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("password")]
+    public EncryptedString Password { get; set; }
 
+    [JsonProperty("passwordRevisionDate")]
     public object PasswordRevisionDate { get; set; }
 
+    [JsonProperty("totp")]
     public object TOTP { get; set; }
 
-    private string _Uri;
-    public string Uri
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _Uri);
-        set => _Uri = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("uri")]
+    public EncryptedString Uri { get; set; }
 
-    public List<UrlModel> Uris { get; set; }
+    [JsonProperty("uris")]
+    public List<UrlModel> Uris { get; set; } = new();
 
-    private string _Username;
-    public string Username
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _Username);
-        set => _Username = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
-
-    public BitWardenDatabase.CipherItem.Models.LoginFieldModel ToDatabaseModel()
-    {
-        return new BitWardenDatabase.CipherItem.Models.LoginFieldModel
-        {
-            AutoFillOnPageLoad = AutoFillOnPageLoad,
-            Password = _Password,
-            PasswordRevisionDate = PasswordRevisionDate,
-            TOTP = TOTP,
-            Uri = _Uri,
-            Uris = new List<BitWardenDatabase.CipherItem.Models.UrlModel>(Uris.Select(e => e.ToDatabaseModel())),
-            Username = _Username,
-        };
-    }
+    [JsonProperty("username")]
+    public EncryptedString Username { get; set; }
 }

@@ -1,3 +1,4 @@
+using Newtonsoft.Json;
 using SharpWarden.BitWardenDatabaseSession.CipherItem.Models;
 using SharpWarden.BitWardenDatabaseSession.CollectionItem.Models;
 using SharpWarden.BitWardenDatabaseSession.FolderItem.Models;
@@ -5,7 +6,7 @@ using SharpWarden.BitWardenDatabaseSession.ProfileItem.Models;
 
 namespace SharpWarden.BitWardenDatabaseSession.Models;
 
-public class DatabaseModel
+public class DatabaseModel : IDatabaseSessionModel
 {
     private DatabaseSession _DatabaseSession;
 
@@ -18,32 +19,49 @@ public class DatabaseModel
         Profile = new(databaseSession);
     }
 
-    public DatabaseModel(DatabaseSession databaseSession, BitWardenDatabase.Models.DatabaseModel databaseModel)
+    public bool HasSession() => _DatabaseSession != null;
+
+    public void SetDatabaseSession(DatabaseSession databaseSession)
     {
         _DatabaseSession = databaseSession;
 
-        Items = databaseModel.Items == null ? null : new List<CipherItemModel>(databaseModel.Items.Select(e => new CipherItemModel(_DatabaseSession, e.OrganizationId, e)));
-        Folders = databaseModel.Folders == null ? null : new List<FolderItemModel>(databaseModel.Folders.Select(e => new FolderItemModel(_DatabaseSession, e)));
-        Collections = databaseModel.Collections == null ? null : new List<CollectionItemModel>(databaseModel.Collections.Select(e => new CollectionItemModel(_DatabaseSession, e)));
-        Profile = databaseModel.Profile == null ? null : new ProfileItemModel(databaseSession, databaseModel.Profile);
+        foreach (var item in Items)
+            item.SetDatabaseSession(_DatabaseSession);
+
+        foreach (var item in Folders)
+            item.SetDatabaseSession(_DatabaseSession);
+
+        foreach (var item in Collections)
+            item.SetDatabaseSession(_DatabaseSession);
+
+        Profile?.SetDatabaseSession(_DatabaseSession);
     }
 
+    public void SetDatabaseSession(DatabaseSession databaseSession, Guid? organizationId)
+    {
+        _DatabaseSession = databaseSession;
+
+        foreach (var item in Items)
+            item.SetDatabaseSession(_DatabaseSession, organizationId);
+
+        foreach (var item in Folders)
+            item.SetDatabaseSession(_DatabaseSession, organizationId);
+
+        foreach (var item in Collections)
+            item.SetDatabaseSession(_DatabaseSession, organizationId);
+
+        Profile?.SetDatabaseSession(_DatabaseSession, organizationId);
+    }
+
+    [JsonProperty("ciphers")]
     public List<CipherItemModel> Items { get; set; }
 
+    [JsonProperty("folders")]
     public List<FolderItemModel> Folders { get; set; }
 
+    [JsonProperty("collections")]
     public List<CollectionItemModel> Collections { get; set; }
 
+    [JsonProperty("profile")]
     public ProfileItemModel Profile { get; set; }
-
-    public BitWardenDatabase.Models.DatabaseModel ToDatabaseModel()
-    {
-        return new BitWardenDatabase.Models.DatabaseModel
-        {
-            Items = Items == null ? null : new List<BitWardenDatabase.CipherItem.Models.CipherItemModel>(Items.Select(e => e.ToDatabaseModel())),
-            Folders = Folders == null ? null : new List<BitWardenDatabase.FolderItem.Models.FolderItemModel>(Folders.Select(e => e.ToDatabaseModel())),
-            Collections = Collections == null ? null : new List<BitWardenDatabase.CollectionItem.Models.CollectionItemModel>(Collections.Select(e => e.ToDatabaseModel())),
-            Profile = Profile?.ToDatabaseModel(),
-        };
-    }
 }

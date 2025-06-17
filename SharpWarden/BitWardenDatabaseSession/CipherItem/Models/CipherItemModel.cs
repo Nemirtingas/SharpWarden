@@ -1,158 +1,139 @@
-using SharpWarden.BitWardenDatabase;
+using Newtonsoft.Json;
+using SharpWarden.BitWardenDatabaseSession.Models;
 
 namespace SharpWarden.BitWardenDatabaseSession.CipherItem.Models;
 
-public class CipherItemModel
+public class CipherItemModel : IDatabaseSessionModel
 {
     private DatabaseSession _DatabaseSession;
-    private Guid? _OrganizationId;
 
-    public CipherItemModel(DatabaseSession databaseSession, Guid? organizationId)
+    public CipherItemModel(DatabaseSession databaseSession)
     {
-        _DatabaseSession = databaseSession;
-        _OrganizationId = organizationId;
-        PasswordHistory = new();
+        SetDatabaseSession(databaseSession);
     }
 
-    public CipherItemModel(DatabaseSession databaseSession, Guid? organizationId, BitWardenDatabase.CipherItem.Models.CipherItemModel databaseModel)
+    public bool HasSession() => _DatabaseSession != null;
+
+    public void SetDatabaseSession(DatabaseSession databaseSession)
     {
         _DatabaseSession = databaseSession;
-        _OrganizationId = organizationId;
 
-        if (databaseModel.Attachments != null)
-            Attachments = new List<AttachmentModel>(databaseModel.Attachments.Select(e => new AttachmentModel(databaseSession, organizationId, e)));
+        if (Attachments != null)
+            foreach (var v in Attachments)
+                v.SetDatabaseSession(databaseSession);
 
-        if (databaseModel.Card != null)
-            Card = new CardFieldModel(databaseSession, organizationId, databaseModel.Card);
+        Card?.SetDatabaseSession(_DatabaseSession);
 
-        if (databaseModel.CollectionsIds != null)
-            CollectionsIds = new List<Guid>(databaseModel.CollectionsIds);
+        if (Fields != null)
+            foreach (var v in Fields)
+                v.SetDatabaseSession(databaseSession);
 
-        CreationDate = databaseModel.CreationDate;
-        DeletedDate = databaseModel.DeletedDate;
-        Edit = databaseModel.Edit;
-        Favorite = databaseModel.Favorite;
+        Identity?.SetDatabaseSession(_DatabaseSession);
+        Login?.SetDatabaseSession(_DatabaseSession);
 
-        if (databaseModel.Fields != null)
-            Fields = new List<CustomFieldModel>(databaseModel.Fields.Select(e => new CustomFieldModel(databaseSession, organizationId, e)));
-
-        FolderId = databaseModel.FolderId;
-        Id = databaseModel.Id;
-
-        if (databaseModel.Identity != null)
-            Identity = new IdentityFieldModel(databaseSession, organizationId, databaseModel.Identity);
-
-        if (databaseModel.Login != null)
-            Login = new LoginFieldModel(databaseSession, organizationId, databaseModel.Login);
-
-        _Name = databaseModel.Name;
-        _Notes = databaseModel.Notes;
-        OrganizationUseTopt = databaseModel.OrganizationUseTopt;
-        PasswordHistory = new List<BitWardenDatabase.CipherItem.Models.PasswordHistoryModel>(databaseModel.PasswordHistory);
-        Reprompt = databaseModel.Reprompt;
-        RevisionDate = databaseModel.RevisionDate;
-
-        if (databaseModel.SecureNote != null)
-            SecureNote = new SecureNoteFieldModel(databaseSession, organizationId, databaseModel.SecureNote);
-
-        _SshKey = databaseModel.SshKey;
-        ItemType = databaseModel.ItemType;
-        ViewPassword = databaseModel.ViewPassword;
+        Name = new EncryptedString(Name.CipherString, _DatabaseSession);
+        Notes = new EncryptedString(Notes.CipherString, _DatabaseSession);
+        SSHKey = new EncryptedString(SSHKey.CipherString, _DatabaseSession);
     }
 
+    public void SetDatabaseSession(DatabaseSession databaseSession, Guid? organizationId)
+    {
+        _DatabaseSession = databaseSession;
+        OrganizationId = organizationId;
+
+        if (Attachments != null)
+            foreach (var v in Attachments)
+                v.SetDatabaseSession(_DatabaseSession, OrganizationId);
+
+        Card?.SetDatabaseSession(_DatabaseSession, OrganizationId);
+
+        if (Fields != null)
+            foreach (var v in Fields)
+                v.SetDatabaseSession(_DatabaseSession, OrganizationId);
+
+        Identity?.SetDatabaseSession(_DatabaseSession, OrganizationId);
+        Login?.SetDatabaseSession(_DatabaseSession, OrganizationId);
+        Name = new EncryptedString(Name.CipherString, _DatabaseSession, OrganizationId);
+        Notes = new EncryptedString(Notes.CipherString, _DatabaseSession, OrganizationId);
+        SSHKey = new EncryptedString(SSHKey.CipherString, _DatabaseSession, OrganizationId);
+    }
+
+    [JsonProperty("attachments")]
     public List<AttachmentModel> Attachments { get; set; }
 
+    [JsonProperty("card")]
     public CardFieldModel Card { get; set; }
 
+    [JsonProperty("collectionIds")]
     public List<Guid> CollectionsIds { get; set; }
 
+    [JsonProperty("creationDate")]
     public DateTimeOffset? CreationDate { get; set; }
 
+    // Ignore data item, its dynamic and contains one of the Card/Identity/Login/SecureNote object + some other fields like Fields.
+    //[JsonProperty("data")]
+    //public object Data { get; set; }
+
+    [JsonProperty("deletedDate")]
     public DateTimeOffset? DeletedDate { get; set; }
 
+    [JsonProperty("edit")]
     public bool Edit { get; set; }
 
+    [JsonProperty("favorite")]
     public bool Favorite { get; set; }
 
+    [JsonProperty("fields")]
     public List<CustomFieldModel> Fields { get; set; }
 
+    [JsonProperty("folderId")]
     public Guid? FolderId { get; set; }
 
+    [JsonProperty("id")]
     public Guid Id { get; set; }
 
+    [JsonProperty("identity")]
     public IdentityFieldModel Identity { get; set; }
 
-    // Probably an encrypted string
+    [JsonProperty("key")]
     public string Key { get; set; }
 
+    [JsonProperty("login")]
     public LoginFieldModel Login { get; set; }
 
-    private string _Name;
-    public string Name
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _Name);
-        set => _Name = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("name")]
+    public EncryptedString Name { get; set; }
 
-    private string _Notes;
-    public string Notes
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _Notes);
-        set => _Notes = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("notes")]
+    public EncryptedString Notes { get; set; }
 
+    [JsonProperty("object")]
+    public ObjectType ObjectType { get; set; } = ObjectType.CipherDetails;
+
+    [JsonProperty("organizationId")]
     public Guid? OrganizationId { get; set; }
 
-    public bool OrganizationUseTopt { get; set; }
+    [JsonProperty("organizationUseTotp")]
+    public bool OrganizationUseTOTP { get; set; }
 
-    public List<BitWardenDatabase.CipherItem.Models.PasswordHistoryModel> PasswordHistory { get; set; }
+    [JsonProperty("passwordHistory")]
+    public List<PasswordHistoryModel> PasswordHistory { get; set; }
 
+    [JsonProperty("reprompt")]
     public int Reprompt { get; set; }
 
+    [JsonProperty("revisionDate")]
     public DateTimeOffset? RevisionDate { get; set; }
 
+    [JsonProperty("secureNote")]
     public SecureNoteFieldModel SecureNote { get; set; }
 
-    private string _SshKey;
-    public string SshKey
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _SshKey);
-        set => _SshKey = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("sshKey")]
+    public EncryptedString SSHKey { get; set; }
 
-    public BitWardenDatabase.CipherItem.Models.CipherItemType ItemType { get; set; }
+    [JsonProperty("type")]
+    public CipherItemType ItemType { get; set; }
 
+    [JsonProperty("viewPassword")]
     public bool ViewPassword { get; set; }
-
-    public BitWardenDatabase.CipherItem.Models.CipherItemModel ToDatabaseModel()
-    {
-        return new BitWardenDatabase.CipherItem.Models.CipherItemModel
-        {
-            Attachments = Attachments == null ? null : new List<BitWardenDatabase.CipherItem.Models.AttachmentModel>(Attachments.Select(e => e.ToDatabaseModel())),
-            Card = Card?.ToDatabaseModel(),
-            CollectionsIds = new List<Guid>(CollectionsIds),
-            CreationDate = CreationDate,
-            DeletedDate = DeletedDate,
-            Edit = Edit,
-            Favorite = Favorite,
-            Fields = Fields == null ? null : new List<BitWardenDatabase.CipherItem.Models.CustomFieldModel>(Fields.Select(e => e.ToDatabaseModel())),
-            FolderId = FolderId,
-            Id = Id,
-            Identity = Identity?.ToDatabaseModel(),
-            Key = Key,
-            Login = Login?.ToDatabaseModel(),
-            Name = _Name,
-            Notes = _Notes,
-            ObjectType = ObjectType.CipherDetails,
-            OrganizationId = OrganizationId,
-            OrganizationUseTopt = OrganizationUseTopt,
-            PasswordHistory = new List<BitWardenDatabase.CipherItem.Models.PasswordHistoryModel>(PasswordHistory),
-            Reprompt = Reprompt,
-            RevisionDate = RevisionDate,
-            SecureNote = SecureNote?.ToDatabaseModel(),
-            SshKey = _SshKey,
-            ItemType = ItemType,
-            ViewPassword = ViewPassword,
-        };
-    }
 }

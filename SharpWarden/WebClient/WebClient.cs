@@ -1,14 +1,13 @@
 using System.Net.Http.Headers;
 using System.Text;
-using SharpWarden.BitWardenDatabase.CipherItem.Models;
-using SharpWarden.BitWardenDatabase.Models;
-using SharpWarden.BitWardenDatabase.ProfileItem.Models;
 using SharpWarden.BitWardenWebSession.Models;
 using SharpWarden.WebClient.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Net.Http.Json;
-using SharpWarden.BitWardenDatabase.FolderItem.Models;
+using SharpWarden.BitWardenDatabaseSession.Models;
+using SharpWarden.BitWardenDatabaseSession.FolderItem.Models;
+using SharpWarden.BitWardenDatabaseSession.CipherItem.Models;
+using SharpWarden.BitWardenDatabaseSession.ProfileItem.Models;
 
 namespace SharpWarden.WebClient;
 
@@ -26,6 +25,7 @@ public class WebClient
         _WebSession = new LoginModel();
         _HttpClient = new HttpClient { BaseAddress = new Uri(baseUrl) };
         _JsonSerializer = new JsonSerializer();
+        _JsonSerializer.Converters.Add(new EncryptedStringConverter());
     }
 
     private T _Deserialize<T>(Stream stream)
@@ -117,8 +117,8 @@ public class WebClient
 
         var profile = await GetProfileAsync();
 
-        _WebSession.Key = profile.Key;
-        _WebSession.PrivateKey = profile.PrivateKey;
+        _WebSession.Key = profile.Key.CipherString;
+        _WebSession.PrivateKey = profile.PrivateKey.CipherString;
 
         return true;
     }

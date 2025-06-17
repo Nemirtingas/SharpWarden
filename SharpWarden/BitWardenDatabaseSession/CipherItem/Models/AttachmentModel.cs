@@ -1,58 +1,55 @@
-using SharpWarden.BitWardenDatabase;
+using Newtonsoft.Json;
+using SharpWarden.BitWardenDatabaseSession.Models;
 
 namespace SharpWarden.BitWardenDatabaseSession.CipherItem.Models;
 
-public class AttachmentModel
+public class AttachmentModel : IDatabaseSessionModel
 {
     private DatabaseSession _DatabaseSession;
     private Guid? _OrganizationId;
 
-    public AttachmentModel(DatabaseSession databaseSession, Guid? organizationId, BitWardenDatabase.CipherItem.Models.AttachmentModel databaseModel)
+    public AttachmentModel(DatabaseSession databaseSession)
+    {
+        SetDatabaseSession(databaseSession);
+    }
+
+    public bool HasSession() => _DatabaseSession != null;
+
+    public void SetDatabaseSession(DatabaseSession databaseSession)
+    {
+        _DatabaseSession = databaseSession;
+
+        FileName = new EncryptedString(FileName.CipherString, _DatabaseSession);
+        Key = new EncryptedString(Key.CipherString, _DatabaseSession);
+    }
+
+    public void SetDatabaseSession(DatabaseSession databaseSession, Guid? organizationId)
     {
         _DatabaseSession = databaseSession;
         _OrganizationId = organizationId;
 
-        _FileName = databaseModel.FileName;
-        Id = databaseModel.Id;
-        _Key = databaseModel.Key;
-        Size = databaseModel.Size;
-        SizeName = databaseModel.SizeName;
-        Url = databaseModel.Url;
+        FileName = new EncryptedString(FileName.CipherString, _DatabaseSession, _OrganizationId);
+        Key = new EncryptedString(Key.CipherString, _DatabaseSession, _OrganizationId);
     }
 
-    private string _FileName;
-    public string FileName
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, _FileName);
-        set => _FileName = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("fileName")]
+    public EncryptedString FileName { get; set; }
 
+    [JsonProperty("id")]
     public string Id { get; set; }
 
-    private string _Key;
-    public byte[] Key
-    {
-        get => _DatabaseSession.GetClearBytesWithMasterKey(_OrganizationId, _Key);
-        set => _Key = _DatabaseSession.CryptClearBytesWithMasterKey(_OrganizationId, value);
-    }
+    [JsonProperty("key")]
+    public EncryptedString Key { get; set; }
 
+    [JsonProperty("object")]
+    public ObjectType ObjectType { get; set; } = ObjectType.Attachment;
+
+    [JsonProperty("size")]
     public int Size { get; set; }
 
+    [JsonProperty("sizeName")]
     public string SizeName { get; set; }
 
+    [JsonProperty("url")]
     public string Url { get; set; }
-
-    public BitWardenDatabase.CipherItem.Models.AttachmentModel ToDatabaseModel()
-    {
-        return new BitWardenDatabase.CipherItem.Models.AttachmentModel
-        {
-            FileName = _FileName,
-            Id = Id,
-            Key = _Key,
-            ObjectType = ObjectType.Attachment,
-            Size = Size,
-            SizeName = SizeName,
-            Url = Url
-        };
-    }
 }

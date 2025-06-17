@@ -1,125 +1,95 @@
-using SharpWarden.BitWardenDatabase;
+using Newtonsoft.Json;
+using SharpWarden.BitWardenDatabaseSession.Models;
 
 namespace SharpWarden.BitWardenDatabaseSession.ProfileItem.Models;
 
-public class ProfileItemModel
+public class ProfileItemModel : IDatabaseSessionModel
 {
     private DatabaseSession _DatabaseSession;
 
     public ProfileItemModel(DatabaseSession databaseSession)
     {
-        _DatabaseSession = databaseSession;
-
         Organizations = new();
+
+        SetDatabaseSession(databaseSession);
     }
 
-    public ProfileItemModel(DatabaseSession databaseSession, BitWardenDatabase.ProfileItem.Models.ProfileItemModel databaseModel)
+    public bool HasSession() => _DatabaseSession != null;
+
+    public void SetDatabaseSession(DatabaseSession databaseSession)
     {
         _DatabaseSession = databaseSession;
 
-        _Status = databaseModel._Status;
-        AvatarColor = databaseModel.AvatarColor;
-        CreationDate = databaseModel.CreationDate;
-        Culture = databaseModel.Culture;
-        Email = databaseModel.Email;
-        EmailVerified = databaseModel.EmailVerified;
-        ForcePasswordReset = databaseModel.ForcePasswordReset;
-        Id = databaseModel.Id;
-        _Key = databaseModel.Key;
-        MasterPasswordHint = databaseModel.MasterPasswordHint;
-        Name = databaseModel.Name;
-        ObjectType = databaseModel.ObjectType;
-        Organizations = databaseModel.Organizations == null ? null : new List<OrganizationModel>(databaseModel.Organizations.Select(e => new OrganizationModel(e)));
-        Premium = databaseModel.Premium;
-        PremiumFromOrganization = databaseModel.PremiumFromOrganization;
-        _PrivateKey = databaseModel.PrivateKey;
-        ProviderOrganizations = databaseModel.ProviderOrganizations;
-        Providers = databaseModel.Providers;
-        SecurityStamp = databaseModel.SecurityStamp;
-        TwoFactorEnabled = databaseModel.TwoFactorEnabled;
-        UsesKeyConnector = databaseModel.UsesKeyConnector;
+        Key = new EncryptedString(Key.CipherString, _DatabaseSession);
+        PrivateKey = new EncryptedString(PrivateKey.CipherString, _DatabaseSession);
     }
 
+    public void SetDatabaseSession(DatabaseSession databaseSession, Guid? organizationId)
+        => SetDatabaseSession(databaseSession, organizationId);
+
+    [JsonProperty("_status")]
     public string _Status { get; set; }
 
+    [JsonProperty("avatarColor")]
     public string AvatarColor { get; set; }
 
+    [JsonProperty("creationDate")]
     public DateTimeOffset? CreationDate { get; set; }
 
+    [JsonProperty("culture")]
     public string Culture { get; set; }
 
+    [JsonProperty("email")]
     public string Email { get; set; }
 
+    [JsonProperty("emailVerified")]
     public bool EmailVerified { get; set; }
 
+    [JsonProperty("forcePasswordReset")]
     public bool ForcePasswordReset { get; set; }
 
+    [JsonProperty("id")]
     public Guid? Id { get; set; }
 
-    private string _Key;
     /// <summary>
     /// Don't update this unless you know what you're doing! It will invalidate your whole database!
     /// </summary>
-    public string Key
-    {
-        get => _Key;
-        set => throw new NotImplementedException();
-    }
+    [JsonProperty("key")]
+    public EncryptedString Key { get; set; }
 
+    [JsonProperty("masterPasswordHint")]
     public string MasterPasswordHint { get; set; }
 
+    [JsonProperty("name")]
     public string Name { get; set; }
 
-    public ObjectType ObjectType { get; } = ObjectType.Profile;
+    [JsonProperty("object")]
+    public ObjectType ObjectType { get; set; } = ObjectType.Profile;
 
-    public List<OrganizationModel> Organizations { get; }
+    [JsonProperty("organizations")]
+    public List<OrganizationModel> Organizations { get; set; } = new();
 
+    [JsonProperty("premium")]
     public bool Premium { get; set; }
 
+    [JsonProperty("premiumFromOrganization")]
     public bool PremiumFromOrganization { get; set; }
 
-    private string _PrivateKey;
-    public byte[] PrivateKey
-    {
-        get => _DatabaseSession.GetClearBytesWithMasterKey(null, _PrivateKey);
-        set => _PrivateKey = _DatabaseSession.CryptClearBytesWithMasterKey(null, value);
-    }
+    [JsonProperty("privateKey")]
+    public EncryptedString PrivateKey { get; set; }
 
+    [JsonProperty("providerOrganizations")]
     public List<object> ProviderOrganizations { get; set; }
 
+    [JsonProperty("providers")]
     public List<object> Providers { get; set; }
 
+    [JsonProperty("securityStamp")]
     public Guid? SecurityStamp { get; set; }
 
+    [JsonProperty("twoFactorEnabled")]
     public bool TwoFactorEnabled { get; set; }
 
+    [JsonProperty("usesKeyConnector")]
     public bool UsesKeyConnector { get; set; }
-
-    public BitWardenDatabase.ProfileItem.Models.ProfileItemModel ToDatabaseModel()
-    {
-        return new BitWardenDatabase.ProfileItem.Models.ProfileItemModel
-        {
-            _Status = _Status,
-            AvatarColor = AvatarColor,
-            CreationDate = CreationDate,
-            Culture = Culture,
-            Email = Email,
-            EmailVerified = EmailVerified,
-            ForcePasswordReset = ForcePasswordReset,
-            Id = Id,
-            Key = _Key,
-            MasterPasswordHint = MasterPasswordHint,
-            Name = Name,
-            ObjectType = ObjectType,
-            Organizations = Organizations == null ? null : new List<BitWardenDatabase.ProfileItem.Models.OrganizationModel>(Organizations.Select(e => e.ToDatabaseModel())),
-            Premium = Premium,
-            PremiumFromOrganization = PremiumFromOrganization,
-            PrivateKey = _PrivateKey,
-            ProviderOrganizations = ProviderOrganizations,
-            Providers = Providers,
-            SecurityStamp = SecurityStamp,
-            TwoFactorEnabled = TwoFactorEnabled,
-            UsesKeyConnector = UsesKeyConnector,
-        };
-    }
  }

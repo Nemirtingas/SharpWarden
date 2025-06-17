@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
-using Org.BouncyCastle.Crypto.Modes;
 using SharpWarden.BitWardenDatabaseSession;
+using SharpWarden.BitWardenDatabaseSession.Models;
 
 namespace SharpWarden;
 
@@ -49,10 +49,37 @@ public struct EncryptedString
     {
     }
 
+    public EncryptedString(string cipherString)
+    {
+        CipherString = cipherString;
+    }
+
     public EncryptedString(DatabaseSession databaseSession)
     {
         DatabaseSession = databaseSession;
     }
+
+    public EncryptedString(string cipherString, DatabaseSession databaseSession)
+    {
+        DatabaseSession = databaseSession;
+        CipherString = cipherString;
+    }
+
+    public EncryptedString(DatabaseSession databaseSession, Guid? organizationId)
+    {
+        DatabaseSession = databaseSession;
+        OrganizationId = organizationId;
+    }
+
+    public EncryptedString(string cipherString, DatabaseSession databaseSession, Guid? organizationId)
+    {
+        DatabaseSession = databaseSession;
+        OrganizationId = organizationId;
+        CipherString = cipherString;
+    }
+
+    [JsonIgnore]
+    public bool HasSession => DatabaseSession != null;
 
     [JsonIgnore]
     public string ClearString
@@ -84,6 +111,42 @@ public struct EncryptedString
                 case EncryptedStringType.Unknown: // Common case of an unknown type would be to crypt with the master key.
                 case EncryptedStringType.MasterKey: CipherString = DatabaseSession.CryptClearStringWithMasterKey(OrganizationId, value); return;
                 case EncryptedStringType.RSACrypt: CipherString = DatabaseSession.CryptClearStringWithRSAKey(OrganizationId, value); return;
+            }
+
+            throw new NotImplementedException();
+        }
+    }
+
+    [JsonIgnore]
+    public byte[] ClearBytes
+    {
+        get
+        {
+            if (CipherString == null)
+                return null;
+
+            if (DatabaseSession == null)
+                throw new InvalidOperationException("The database session is not loaded.");
+
+            if (CipherType == EncryptedStringType.MasterKey)
+                return DatabaseSession.GetClearBytesWithMasterKey(OrganizationId, CipherString);
+
+            if (CipherType == EncryptedStringType.RSACrypt)
+                return DatabaseSession.GetClearBytesWithRSAKey(OrganizationId, CipherString);
+
+            throw new NotImplementedException();
+        }
+
+        set
+        {
+            if (DatabaseSession == null)
+                throw new InvalidOperationException("The database session is not loaded.");
+
+            switch (CipherType)
+            {
+                case EncryptedStringType.Unknown: // Common case of an unknown type would be to crypt with the master key.
+                case EncryptedStringType.MasterKey: CipherString = DatabaseSession.CryptClearBytesWithMasterKey(OrganizationId, value); return;
+                case EncryptedStringType.RSACrypt: CipherString = DatabaseSession.CryptClearBytesWithRSAKey(OrganizationId, value); return;
             }
 
             throw new NotImplementedException();

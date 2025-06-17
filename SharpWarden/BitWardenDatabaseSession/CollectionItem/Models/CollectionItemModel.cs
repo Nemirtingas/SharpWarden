@@ -1,61 +1,50 @@
-using SharpWarden.BitWardenDatabase;
+using Newtonsoft.Json;
+using SharpWarden.BitWardenDatabaseSession.Models;
 
 namespace SharpWarden.BitWardenDatabaseSession.CollectionItem.Models;
 
-public class CollectionItemModel
+public class CollectionItemModel : IDatabaseSessionModel
 {
     private DatabaseSession _DatabaseSession;
 
     public CollectionItemModel(DatabaseSession databaseSession)
     {
-        _DatabaseSession = databaseSession;
+        SetDatabaseSession(databaseSession);
     }
 
-    public CollectionItemModel(DatabaseSession databaseSession, BitWardenDatabase.CollectionItem.Models.CollectionItemModel databaseModel)
+    public bool HasSession() => _DatabaseSession != null;
+
+    public void SetDatabaseSession(DatabaseSession databaseSession)
     {
         _DatabaseSession = databaseSession;
 
-        ExternalId = databaseModel.Id;
-        HidePasswords = databaseModel.HidePasswords;
-        Id = databaseModel.Id;
-        Manage = databaseModel.Manage;
-        _Name = databaseModel.Name;
-
-        OrganizationId = databaseModel.OrganizationId;
-        ReadOnly = databaseModel.ReadOnly;
+        Name = new EncryptedString(Name.CipherString, databaseSession);
     }
 
+    public void SetDatabaseSession(DatabaseSession databaseSession, Guid? organizationId)
+        => SetDatabaseSession(databaseSession);
+
+    [JsonProperty("externalId")]
     public Guid? ExternalId { get; set; }
 
+    [JsonProperty("hidePasswords")]
     public bool HidePasswords { get; set; }
 
+    [JsonProperty("id")]
     public Guid? Id { get; set; }
 
+    [JsonProperty("manage")]
     public bool Manage { get; set; }
 
-    private string _Name;
-    public string Name
-    {
-        get => _DatabaseSession.GetClearStringWithMasterKey(OrganizationId, _Name);
-        set => _Name = _DatabaseSession.CryptClearStringWithMasterKey(OrganizationId, value);
-    }
+    [JsonProperty("name")]
+    public EncryptedString Name { get; set; }
 
+    [JsonProperty("object")]
+    public ObjectType ObjectType { get; set; } = ObjectType.CollectionDetails;
+
+    [JsonProperty("organizationId")]
     public Guid? OrganizationId { get; set; }
 
+    [JsonProperty("readOnly")]
     public bool ReadOnly { get; set; }
-    
-        public BitWardenDatabase.CollectionItem.Models.CollectionItemModel ToDatabaseModel()
-    {
-        return new BitWardenDatabase.CollectionItem.Models.CollectionItemModel
-        {
-            ExternalId = ExternalId,
-            HidePasswords = HidePasswords,
-            Id = Id,
-            Manage = Manage,
-            Name = _Name,
-            ObjectType = ObjectType.CollectionDetails,
-            OrganizationId = OrganizationId,
-            ReadOnly = ReadOnly,
-        };
-    }
 }

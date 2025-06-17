@@ -1,7 +1,6 @@
-
-using SharpWarden.BitWardenDatabase;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using SharpWarden.BitWardenDatabaseSession;
 
 namespace SharpWarden.WebClient.Models;
 

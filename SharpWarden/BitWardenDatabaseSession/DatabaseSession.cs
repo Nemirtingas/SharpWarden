@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using Newtonsoft.Json;
 using SharpWarden.BitWardenDatabaseSession.CollectionItem.Models;
 using SharpWarden.BitWardenDatabaseSession.FolderItem.Models;
 using SharpWarden.BitWardenDatabaseSession.Models;
@@ -37,7 +38,7 @@ public class DatabaseSession
             {
                 if (organization.Id == ownerId.Value)
                 {
-                    var organizationKey = BitWardenCipherService.DecryptWithRSA(organization.Key, _UserKeys.RSAKey);
+                    var organizationKey = BitWardenCipherService.DecryptWithRSAKey(organization.Key, _UserKeys.RSAKey);
                     keys = new UserKeys
                     {
                         SymmetricKey = organizationKey.Take(32).ToArray(),
@@ -83,10 +84,18 @@ public class DatabaseSession
         return Task.FromResult(true);
     }
 
-    public Task<bool> LoadBitWardenDatabaseAsync(byte[] userPassword, int kdfIterations, BitWardenDatabase.Models.DatabaseModel database)
+    public Task<bool> LoadBitWardenDatabaseAsync(byte[] userPassword, int kdfIterations, Stream stream)
     {
         _Keys = new();
-        Database = new DatabaseModel(this, database);
+        
+        using(var sr = new StreamReader(stream))
+        using(var reader = new JsonTextReader(sr))
+        {
+            var serializer = JsonSerializer.Create();
+            serializer.Converters.Add(new EncryptedStringConverter());
+            Database = serializer.Deserialize<DatabaseModel>(reader);
+        }
+        Database.SetDatabaseSession(this);
 
         var userEmail = Encoding.UTF8.GetBytes(Database.Profile.Email);
 
@@ -98,7 +107,7 @@ public class DatabaseSession
             userMasterKey[i] = 0;
 
         // Decrypt the protected symmetric key
-        var symKey = BitWardenCipherService.DecryptWithMasterKey(Database.Profile.Key, userEncryptionKey, userMacKey);
+        var symKey = BitWardenCipherService.DecryptWithMasterKey(Database.Profile.Key.CipherString, userEncryptionKey, userMacKey);
         if (symKey.Length != 64)
             throw new CryptographicException("Invalid decrypted symmetric key length.");
 
@@ -108,7 +117,7 @@ public class DatabaseSession
         Array.Copy(symKey, 32, _UserKeys.SymmetricMac, 0, 32);
 
         // Decrypt RSA private key
-        _UserKeys.RSAKey = Database.Profile.PrivateKey;
+        _UserKeys.RSAKey = Database.Profile.PrivateKey.ClearBytes;
 
         return Task.FromResult(true);
     }
@@ -137,7 +146,7 @@ public class DatabaseSession
             return null;
 
         var keys = _GetUserKeys(ownerId);
-        return BitWardenCipherService.DecryptWithRSA(cipherString, keys.RSAKey);
+        return BitWardenCipherService.DecryptWithRSAKey(cipherString, keys.RSAKey);
     }
 
     public byte[] GetClearBytesWithMasterKey(Guid? ownerId, string cipherString)
@@ -155,7 +164,7 @@ public class DatabaseSession
             return null;
 
         var keys = _GetUserKeys(ownerId);
-        return BitWardenCipherService.EncryptWithRSA(Encoding.UTF8.GetBytes(clearString), keys.RSAKey);
+        return BitWardenCipherService.EncryptWithRSAKey(Encoding.UTF8.GetBytes(clearString), keys.RSAKey);
     }
 
     public string CryptClearStringWithMasterKey(Guid? ownerId, string clearString)
@@ -165,6 +174,15 @@ public class DatabaseSession
 
         var keys = _GetUserKeys(ownerId);
         return BitWardenCipherService.EncryptWithMasterKey(Encoding.UTF8.GetBytes(clearString), keys.SymmetricKey, keys.SymmetricMac);
+    }
+
+    public string CryptClearBytesWithRSAKey(Guid? ownerId, byte[] bytes)
+    {
+        if (bytes == null)
+            return null;
+
+        var keys = _GetUserKeys(ownerId);
+        return BitWardenCipherService.EncryptWithRSAKey(bytes, keys.RSAKey);
     }
 
     public string CryptClearBytesWithMasterKey(Guid? ownerId, byte[] bytes)
