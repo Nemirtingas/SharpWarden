@@ -19,12 +19,12 @@ public class CardFieldModel : IDatabaseSessionModel
     {
         _DatabaseSession = databaseSession;
 
-        CardholderName = new EncryptedString(CardholderName.CipherString, _DatabaseSession);
-        Brand = new EncryptedString(Brand.CipherString, _DatabaseSession);
-        Number = new EncryptedString(Number.CipherString, _DatabaseSession);
-        ExpMonth = new EncryptedString(ExpMonth.CipherString, _DatabaseSession);
-        ExpYear = new EncryptedString(ExpYear.CipherString, _DatabaseSession);
-        Code = new EncryptedString(Code.CipherString, _DatabaseSession);
+        CardholderName?.SetDatabaseSession(_DatabaseSession);
+        Brand?.SetDatabaseSession(_DatabaseSession);
+        Number?.SetDatabaseSession(_DatabaseSession);
+        ExpMonth?.SetDatabaseSession(_DatabaseSession);
+        ExpYear?.SetDatabaseSession(_DatabaseSession);
+        Code?.SetDatabaseSession(_DatabaseSession);
     }
 
     public void SetDatabaseSession(DatabaseSession databaseSession, Guid? organizationId)
@@ -32,12 +32,12 @@ public class CardFieldModel : IDatabaseSessionModel
         _DatabaseSession = databaseSession;
         _OrganizationId = organizationId;
 
-        CardholderName = new EncryptedString(CardholderName.CipherString, _DatabaseSession, _OrganizationId);
-        Brand = new EncryptedString(Brand.CipherString, _DatabaseSession, _OrganizationId);
-        Number = new EncryptedString(Number.CipherString, _DatabaseSession, _OrganizationId);
-        ExpMonth = new EncryptedString(ExpMonth.CipherString, _DatabaseSession, _OrganizationId);
-        ExpYear = new EncryptedString(ExpYear.CipherString, _DatabaseSession, _OrganizationId);
-        Code = new EncryptedString(Code.CipherString, _DatabaseSession, _OrganizationId);
+        CardholderName?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        Brand?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        Number?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        ExpMonth?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        ExpYear?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        Code?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
     }
 
     [JsonProperty("cardholderName")]

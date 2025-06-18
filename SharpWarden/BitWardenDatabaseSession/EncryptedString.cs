@@ -1,19 +1,13 @@
 using Newtonsoft.Json;
 using SharpWarden.BitWardenDatabaseSession;
 using SharpWarden.BitWardenDatabaseSession.Models;
+using static SharpWarden.BitWardenCipherService;
 
 namespace SharpWarden;
 
-public enum EncryptedStringType
+public class EncryptedStringConverter : JsonConverter<EncryptedString>
 {
-    Unknown = -1,
-    MasterKey = 2,
-    RSACrypt = 4,
-}
-
-public class EncryptedStringConverter : JsonConverter<EncryptedString?>
-{
-    public override EncryptedString? ReadJson(JsonReader reader, Type objectType, EncryptedString? existingValue, bool hasExistingValue, JsonSerializer serializer)
+    public override EncryptedString ReadJson(JsonReader reader, Type objectType, EncryptedString existingValue, bool hasExistingValue, JsonSerializer serializer)
     {
         if (reader.TokenType == JsonToken.String)
         {
@@ -29,19 +23,19 @@ public class EncryptedStringConverter : JsonConverter<EncryptedString?>
         throw new JsonSerializationException($"Unexpected token type {reader.TokenType} when parsing EncryptedString.");
     }
 
-    public override void WriteJson(JsonWriter writer, EncryptedString? value, JsonSerializer serializer)
+    public override void WriteJson(JsonWriter writer, EncryptedString value, JsonSerializer serializer)
     {
         writer.WriteValue(value?.CipherString);
     }
 }
 
-public struct EncryptedString
+public class EncryptedString : IDatabaseSessionModel
 {
     [JsonIgnore]
-    public DatabaseSession DatabaseSession { get; set; }
+    private DatabaseSession _DatabaseSession { get; set; }
 
     [JsonIgnore]
-    public Guid? OrganizationId { get; set; }
+    private Guid? _OrganizationId { get; set; }
 
     public string CipherString { get; set; }
 
@@ -49,37 +43,33 @@ public struct EncryptedString
     {
     }
 
-    public EncryptedString(string cipherString)
-    {
-        CipherString = cipherString;
-    }
-
     public EncryptedString(DatabaseSession databaseSession)
     {
-        DatabaseSession = databaseSession;
+        _DatabaseSession = databaseSession;
     }
 
-    public EncryptedString(string cipherString, DatabaseSession databaseSession)
+    public bool HasSession() => _DatabaseSession != null;
+
+    public void SetDatabaseSession(DatabaseSession databaseSession)
     {
-        DatabaseSession = databaseSession;
-        CipherString = cipherString;
+        _DatabaseSession = databaseSession;
     }
 
-    public EncryptedString(DatabaseSession databaseSession, Guid? organizationId)
+    public void SetDatabaseSession(DatabaseSession databaseSession, Guid? organizationId)
     {
-        DatabaseSession = databaseSession;
-        OrganizationId = organizationId;
+        _DatabaseSession = databaseSession;
+        _OrganizationId = organizationId;
     }
 
-    public EncryptedString(string cipherString, DatabaseSession databaseSession, Guid? organizationId)
+    public EncryptedString Clone()
     {
-        DatabaseSession = databaseSession;
-        OrganizationId = organizationId;
-        CipherString = cipherString;
+        return new EncryptedString
+        {
+            _DatabaseSession = _DatabaseSession,
+            _OrganizationId = _OrganizationId,
+            CipherString = CipherString,
+        };
     }
-
-    [JsonIgnore]
-    public bool HasSession => DatabaseSession != null;
 
     [JsonIgnore]
     public string ClearString
@@ -89,28 +79,28 @@ public struct EncryptedString
             if (CipherString == null)
                 return null;
 
-            if (DatabaseSession == null)
+            if (_DatabaseSession == null)
                     throw new InvalidOperationException("The database session is not loaded.");
 
-            if (CipherType == EncryptedStringType.MasterKey)
-                return DatabaseSession.GetClearStringWithMasterKey(OrganizationId, CipherString);
+            if (CipherType == BitWardenCipherType.AesCbc256_HmacSha256_B64)
+                return _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, CipherString);
 
-            if (CipherType == EncryptedStringType.RSACrypt)
-                return DatabaseSession.GetClearStringWithMasterKeyWithRSAKey(OrganizationId, CipherString);
+            if (CipherType == BitWardenCipherType.Rsa2048_OaepSha1_B64)
+                return _DatabaseSession.GetClearStringWithMasterKeyWithRSAKey(_OrganizationId, CipherString);
 
             throw new NotImplementedException();
         }
 
         set
         {
-            if (DatabaseSession == null)
+            if (_DatabaseSession == null)
                 throw new InvalidOperationException("The database session is not loaded.");
 
             switch (CipherType)
             {
-                case EncryptedStringType.Unknown: // Common case of an unknown type would be to crypt with the master key.
-                case EncryptedStringType.MasterKey: CipherString = DatabaseSession.CryptClearStringWithMasterKey(OrganizationId, value); return;
-                case EncryptedStringType.RSACrypt: CipherString = DatabaseSession.CryptClearStringWithRSAKey(OrganizationId, value); return;
+                case BitWardenCipherType.Unknown: // Common case of an unknown type would be to crypt with the master key.
+                case BitWardenCipherType.AesCbc256_HmacSha256_B64: CipherString = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value); return;
+                case BitWardenCipherType.Rsa2048_OaepSha1_B64: CipherString = _DatabaseSession.CryptClearStringWithRSAKey(_OrganizationId, value); return;
             }
 
             throw new NotImplementedException();
@@ -125,28 +115,28 @@ public struct EncryptedString
             if (CipherString == null)
                 return null;
 
-            if (DatabaseSession == null)
+            if (_DatabaseSession == null)
                 throw new InvalidOperationException("The database session is not loaded.");
 
-            if (CipherType == EncryptedStringType.MasterKey)
-                return DatabaseSession.GetClearBytesWithMasterKey(OrganizationId, CipherString);
+            if (CipherType == BitWardenCipherType.AesCbc256_HmacSha256_B64)
+                return _DatabaseSession.GetClearBytesWithMasterKey(_OrganizationId, CipherString);
 
-            if (CipherType == EncryptedStringType.RSACrypt)
-                return DatabaseSession.GetClearBytesWithRSAKey(OrganizationId, CipherString);
+            if (CipherType == BitWardenCipherType.Rsa2048_OaepSha1_B64)
+                return _DatabaseSession.GetClearBytesWithRSAKey(_OrganizationId, CipherString);
 
             throw new NotImplementedException();
         }
 
         set
         {
-            if (DatabaseSession == null)
+            if (_DatabaseSession == null)
                 throw new InvalidOperationException("The database session is not loaded.");
 
             switch (CipherType)
             {
-                case EncryptedStringType.Unknown: // Common case of an unknown type would be to crypt with the master key.
-                case EncryptedStringType.MasterKey: CipherString = DatabaseSession.CryptClearBytesWithMasterKey(OrganizationId, value); return;
-                case EncryptedStringType.RSACrypt: CipherString = DatabaseSession.CryptClearBytesWithRSAKey(OrganizationId, value); return;
+                case BitWardenCipherType.Unknown: // Common case of an unknown type would be to crypt with the master key.
+                case BitWardenCipherType.AesCbc256_HmacSha256_B64: CipherString = _DatabaseSession.CryptClearBytesWithMasterKey(_OrganizationId, value); return;
+                case BitWardenCipherType.Rsa2048_OaepSha1_B64: CipherString = _DatabaseSession.CryptClearBytesWithRSAKey(_OrganizationId, value); return;
             }
 
             throw new NotImplementedException();
@@ -154,16 +144,16 @@ public struct EncryptedString
     }
 
     [JsonIgnore]
-    public EncryptedStringType CipherType
+    public BitWardenCipherType CipherType
     {
         get
         {
             if (CipherString == null)
-                return EncryptedStringType.Unknown;
+                return BitWardenCipherType.Unknown;
 
             var parts = CipherString.Split(".", 2);
-            if (parts.Length <= 0 || !Enum.TryParse<EncryptedStringType>(parts[0], out var type))
-                return EncryptedStringType.Unknown;
+            if (parts.Length <= 0 || !Enum.TryParse<BitWardenCipherType>(parts[0], out var type))
+                return BitWardenCipherType.Unknown;
 
             return type;
         }
@@ -173,12 +163,12 @@ public struct EncryptedString
             if (CipherType == value)
                 return;
 
-            if (CipherType == EncryptedStringType.Unknown)
+            if (CipherType == BitWardenCipherType.Unknown)
             {
                 switch (value)
                 {
-                    case EncryptedStringType.MasterKey: CipherString = DatabaseSession.CryptClearStringWithMasterKey(null, ""); break;
-                    case EncryptedStringType.RSACrypt: CipherString = DatabaseSession.CryptClearStringWithRSAKey(null, ""); break;
+                    case BitWardenCipherType.AesCbc256_HmacSha256_B64: CipherString = _DatabaseSession.CryptClearStringWithMasterKey(null, ""); break;
+                    case BitWardenCipherType.Rsa2048_OaepSha1_B64: CipherString = _DatabaseSession.CryptClearStringWithRSAKey(null, ""); break;
                 }
                 return;
             }
@@ -190,7 +180,7 @@ public struct EncryptedString
     {
         get
         {
-            if (CipherType != EncryptedStringType.MasterKey)
+            if (CipherType != BitWardenCipherType.AesCbc256_HmacSha256_B64)
                 return null;
 
             var parts = CipherString.Split('.', 2);
@@ -205,7 +195,7 @@ public struct EncryptedString
     {
         get
         {
-            if (CipherType != EncryptedStringType.MasterKey)
+            if (CipherType != BitWardenCipherType.AesCbc256_HmacSha256_B64)
                 return null;
 
             var parts = CipherString.Split('.', 2);
@@ -232,14 +222,14 @@ public struct EncryptedString
     {
         get
         {
-            if (CipherType == EncryptedStringType.MasterKey)
+            if (CipherType == BitWardenCipherType.AesCbc256_HmacSha256_B64)
             {
                 var parts = CipherString.Split('.', 2);
                 var innerParts = parts[1].Split('|');
                 return Convert.FromBase64String(innerParts[1]);
             }
 
-            if (CipherType == EncryptedStringType.RSACrypt)
+            if (CipherType == BitWardenCipherType.Rsa2048_OaepSha1_B64)
             {
                 var parts = CipherString.Split('.', 2);
                 string[] innerParts = parts[1].Split('|');

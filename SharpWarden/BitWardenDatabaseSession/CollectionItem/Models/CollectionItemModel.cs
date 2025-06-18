@@ -18,7 +18,7 @@ public class CollectionItemModel : IDatabaseSessionModel
     {
         _DatabaseSession = databaseSession;
 
-        Name = new EncryptedString(Name.CipherString, databaseSession);
+        Name?.SetDatabaseSession(_DatabaseSession);
     }
 
     public void SetDatabaseSession(DatabaseSession databaseSession, Guid? organizationId)

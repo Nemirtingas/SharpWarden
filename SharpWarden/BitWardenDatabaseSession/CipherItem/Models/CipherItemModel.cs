@@ -18,22 +18,24 @@ public class CipherItemModel : IDatabaseSessionModel
     {
         _DatabaseSession = databaseSession;
 
+        Card?.SetDatabaseSession(_DatabaseSession);
+        Identity?.SetDatabaseSession(_DatabaseSession);
+        Login?.SetDatabaseSession(_DatabaseSession);
+        Name?.SetDatabaseSession(_DatabaseSession);
+        Notes?.SetDatabaseSession(_DatabaseSession);
+        SSHKey?.SetDatabaseSession(_DatabaseSession);
+
         if (Attachments != null)
             foreach (var v in Attachments)
                 v.SetDatabaseSession(databaseSession);
-
-        Card?.SetDatabaseSession(_DatabaseSession);
 
         if (Fields != null)
             foreach (var v in Fields)
                 v.SetDatabaseSession(databaseSession);
 
-        Identity?.SetDatabaseSession(_DatabaseSession);
-        Login?.SetDatabaseSession(_DatabaseSession);
-
-        Name = new EncryptedString(Name.CipherString, _DatabaseSession);
-        Notes = new EncryptedString(Notes.CipherString, _DatabaseSession);
-        SSHKey = new EncryptedString(SSHKey.CipherString, _DatabaseSession);
+        if (PasswordHistory != null)
+            foreach (var v in PasswordHistory)
+                v.SetDatabaseSession(_DatabaseSession);
     }
 
     public void SetDatabaseSession(DatabaseSession databaseSession, Guid? organizationId)
@@ -41,21 +43,53 @@ public class CipherItemModel : IDatabaseSessionModel
         _DatabaseSession = databaseSession;
         OrganizationId = organizationId;
 
+        Card?.SetDatabaseSession(_DatabaseSession, OrganizationId);
+        Identity?.SetDatabaseSession(_DatabaseSession, OrganizationId);
+        Login?.SetDatabaseSession(_DatabaseSession, OrganizationId);
+        Name?.SetDatabaseSession(_DatabaseSession, OrganizationId);
+        Notes?.SetDatabaseSession(_DatabaseSession, OrganizationId);
+        SSHKey?.SetDatabaseSession(_DatabaseSession, OrganizationId);
+
         if (Attachments != null)
             foreach (var v in Attachments)
                 v.SetDatabaseSession(_DatabaseSession, OrganizationId);
-
-        Card?.SetDatabaseSession(_DatabaseSession, OrganizationId);
 
         if (Fields != null)
             foreach (var v in Fields)
                 v.SetDatabaseSession(_DatabaseSession, OrganizationId);
 
-        Identity?.SetDatabaseSession(_DatabaseSession, OrganizationId);
-        Login?.SetDatabaseSession(_DatabaseSession, OrganizationId);
-        Name = new EncryptedString(Name.CipherString, _DatabaseSession, OrganizationId);
-        Notes = new EncryptedString(Notes.CipherString, _DatabaseSession, OrganizationId);
-        SSHKey = new EncryptedString(SSHKey.CipherString, _DatabaseSession, OrganizationId);
+        if (PasswordHistory != null)
+            foreach (var v in PasswordHistory)
+                v.SetDatabaseSession(_DatabaseSession, OrganizationId);
+
+    }
+
+    public LoginFieldModel CreateLogin()
+    {
+        ItemType = CipherItemType.Login;
+        Login = new LoginFieldModel(_DatabaseSession);
+        return Login;
+    }
+
+    public SecureNoteFieldModel CreateSecureNote()
+    {
+        ItemType = CipherItemType.SecureNote;
+        SecureNote = new SecureNoteFieldModel();
+        return SecureNote;
+    }
+
+    public IdentityFieldModel CreateIdentity()
+    {
+        ItemType = CipherItemType.Identity;
+        Identity = new IdentityFieldModel(_DatabaseSession);
+        return Identity;
+    }
+
+    public CardFieldModel CreateCard()
+    {
+        ItemType = CipherItemType.Card;
+        Card = new CardFieldModel(_DatabaseSession);
+        return Card;
     }
 
     [JsonProperty("attachments")]
@@ -68,14 +102,14 @@ public class CipherItemModel : IDatabaseSessionModel
     public List<Guid> CollectionsIds { get; set; }
 
     [JsonProperty("creationDate")]
-    public DateTimeOffset? CreationDate { get; set; }
+    public DateTime? CreationDate { get; set; }
 
     // Ignore data item, its dynamic and contains one of the Card/Identity/Login/SecureNote object + some other fields like Fields.
     //[JsonProperty("data")]
     //public object Data { get; set; }
 
     [JsonProperty("deletedDate")]
-    public DateTimeOffset? DeletedDate { get; set; }
+    public DateTime? DeletedDate { get; set; }
 
     [JsonProperty("edit")]
     public bool Edit { get; set; }
@@ -90,7 +124,7 @@ public class CipherItemModel : IDatabaseSessionModel
     public Guid? FolderId { get; set; }
 
     [JsonProperty("id")]
-    public Guid Id { get; set; }
+    public Guid? Id { get; set; }
 
     [JsonProperty("identity")]
     public IdentityFieldModel Identity { get; set; }
@@ -120,10 +154,10 @@ public class CipherItemModel : IDatabaseSessionModel
     public List<PasswordHistoryModel> PasswordHistory { get; set; }
 
     [JsonProperty("reprompt")]
-    public int Reprompt { get; set; }
+    public CipherRepromptType Reprompt { get; set; }
 
     [JsonProperty("revisionDate")]
-    public DateTimeOffset? RevisionDate { get; set; }
+    public DateTime? RevisionDate { get; set; }
 
     [JsonProperty("secureNote")]
     public SecureNoteFieldModel SecureNote { get; set; }

@@ -19,14 +19,14 @@ public class LoginFieldModel : IDatabaseSessionModel
     {
         _DatabaseSession = databaseSession;
 
-        Password = new EncryptedString(Password.CipherString, databaseSession);
-        Uri = new EncryptedString(Uri.CipherString, databaseSession);
+        Password?.SetDatabaseSession(_DatabaseSession);
+        Uri?.SetDatabaseSession(_DatabaseSession);
+        TOTP?.SetDatabaseSession(_DatabaseSession);
+        Username?.SetDatabaseSession(_DatabaseSession);
 
         if (Uris != null)
             foreach (var uri in Uris)
                 uri.SetDatabaseSession(_DatabaseSession);
-
-        Username = new EncryptedString(Username.CipherString, databaseSession);
     }
 
     public void SetDatabaseSession(DatabaseSession databaseSession, Guid? organizationId)
@@ -34,14 +34,14 @@ public class LoginFieldModel : IDatabaseSessionModel
         _DatabaseSession = databaseSession;
         _OrganizationId = organizationId;
 
-        Password = new EncryptedString(Password.CipherString, _DatabaseSession, _OrganizationId);
-        Uri = new EncryptedString(Uri.CipherString, _DatabaseSession, _OrganizationId);
+        Password?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        Uri?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        TOTP?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        Username?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
 
         if (Uris != null)
             foreach (var uri in Uris)
                 uri.SetDatabaseSession(_DatabaseSession, _OrganizationId);
-
-        Username = new EncryptedString(Username.CipherString, _DatabaseSession, _OrganizationId);
     }
 
     [JsonProperty("autofillOnPageLoad")]
@@ -51,16 +51,16 @@ public class LoginFieldModel : IDatabaseSessionModel
     public EncryptedString Password { get; set; }
 
     [JsonProperty("passwordRevisionDate")]
-    public object PasswordRevisionDate { get; set; }
+    public DateTime? PasswordRevisionDate { get; set; }
 
     [JsonProperty("totp")]
-    public object TOTP { get; set; }
+    public EncryptedString TOTP { get; set; }
 
     [JsonProperty("uri")]
     public EncryptedString Uri { get; set; }
 
     [JsonProperty("uris")]
-    public List<UrlModel> Uris { get; set; } = new();
+    public List<UriModel> Uris { get; set; } = new();
 
     [JsonProperty("username")]
     public EncryptedString Username { get; set; }

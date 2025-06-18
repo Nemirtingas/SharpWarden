@@ -32,13 +32,13 @@ public class DatabaseSession
             return _UserKeys;
         }
 
-        if (!_Keys.TryGetValue(ownerId.Value, out var keys))
+        if (!_Keys.TryGetValue(ownerId.Value, out var keys) && Database?.Profile?.Organizations != null)
         {
             foreach (var organization in Database.Profile.Organizations)
             {
                 if (organization.Id == ownerId.Value)
                 {
-                    var organizationKey = BitWardenCipherService.DecryptWithRSAKey(organization.Key, _UserKeys.RSAKey);
+                    var organizationKey = BitWardenCipherService.DecryptWithRsa2048OaepSha1Base64(organization.Key, _UserKeys.RSAKey);
                     keys = new UserKeys
                     {
                         SymmetricKey = organizationKey.Take(32).ToArray(),
@@ -59,7 +59,6 @@ public class DatabaseSession
     public Task<bool> LoadBitWardenKeysAsync(byte[] userEmail, byte[] userPassword, int kdfIterations, string key, string privateKey)
     {
         _Keys = new();
-        Database = new DatabaseModel(this);
 
         var userMasterKey = BitWardenCipherService.ComputeMasterKey(userEmail, userPassword, kdfIterations);
         var userEncryptionKey = BitWardenCipherService.HKDF_SHA256(userMasterKey, Encoding.UTF8.GetBytes("enc"), 32);
@@ -69,7 +68,7 @@ public class DatabaseSession
             userMasterKey[i] = 0;
 
         // Decrypt the protected symmetric key
-        var symKey = BitWardenCipherService.DecryptWithMasterKey(key, userEncryptionKey, userMacKey);
+        var symKey = BitWardenCipherService.DecryptWithAesCbc256HmacSha256Base64(key, userEncryptionKey, userMacKey);
         if (symKey.Length != 64)
             throw new CryptographicException("Invalid decrypted symmetric key length.");
 
@@ -84,42 +83,25 @@ public class DatabaseSession
         return Task.FromResult(true);
     }
 
-    public Task<bool> LoadBitWardenDatabaseAsync(byte[] userPassword, int kdfIterations, Stream stream)
+    public async Task<bool> LoadBitWardenDatabaseAsync(byte[] userPassword, int kdfIterations, Stream stream)
     {
-        _Keys = new();
-        
-        using(var sr = new StreamReader(stream))
-        using(var reader = new JsonTextReader(sr))
+        using (var sr = new StreamReader(stream))
+        using (var reader = new JsonTextReader(sr))
         {
             var serializer = JsonSerializer.Create();
             serializer.Converters.Add(new EncryptedStringConverter());
-            Database = serializer.Deserialize<DatabaseModel>(reader);
+            return await LoadBitWardenDatabaseAsync(userPassword, kdfIterations, serializer.Deserialize<DatabaseModel>(reader));
         }
+    }
+
+    public async Task<bool> LoadBitWardenDatabaseAsync(byte[] userPassword, int kdfIterations, DatabaseModel database)
+    {
+        _Keys = new();
+
+        Database = database;
         Database.SetDatabaseSession(this);
 
-        var userEmail = Encoding.UTF8.GetBytes(Database.Profile.Email);
-
-        var userMasterKey = BitWardenCipherService.ComputeMasterKey(userEmail, userPassword, kdfIterations);
-        var userEncryptionKey = BitWardenCipherService.HKDF_SHA256(userMasterKey, Encoding.UTF8.GetBytes("enc"), 32);
-        var userMacKey = BitWardenCipherService.HKDF_SHA256(userMasterKey, Encoding.UTF8.GetBytes("mac"), 32);
-
-        for (int i = 0; i < userMasterKey.Length; ++i)
-            userMasterKey[i] = 0;
-
-        // Decrypt the protected symmetric key
-        var symKey = BitWardenCipherService.DecryptWithMasterKey(Database.Profile.Key.CipherString, userEncryptionKey, userMacKey);
-        if (symKey.Length != 64)
-            throw new CryptographicException("Invalid decrypted symmetric key length.");
-
-        _UserKeys = new UserKeys();
-
-        Array.Copy(symKey, 0, _UserKeys.SymmetricKey, 0, 32);
-        Array.Copy(symKey, 32, _UserKeys.SymmetricMac, 0, 32);
-
-        // Decrypt RSA private key
-        _UserKeys.RSAKey = Database.Profile.PrivateKey.ClearBytes;
-
-        return Task.FromResult(true);
+        return await LoadBitWardenKeysAsync(Encoding.UTF8.GetBytes(Database.Profile.Email), userPassword, kdfIterations, Database.Profile.Key.CipherString, Database.Profile.PrivateKey.CipherString);
     }
 
     public string GetClearStringWithMasterKeyWithRSAKey(Guid? ownerId, string cipherString)
@@ -128,7 +110,7 @@ public class DatabaseSession
             return null;
 
         var keys = _GetUserKeys(ownerId);
-        return BitWardenCipherService.DecryptStringWithRSA(cipherString, keys.RSAKey);
+        return BitWardenCipherService.DecryptStringWithRsa2048OaepSha1Base64(cipherString, keys.RSAKey);
     }
 
     public string GetClearStringWithMasterKey(Guid? ownerId, string cipherString)
@@ -137,7 +119,7 @@ public class DatabaseSession
             return null;
 
         var keys = _GetUserKeys(ownerId);
-        return BitWardenCipherService.DecryptStringWithMasterKey(cipherString, keys.SymmetricKey, keys.SymmetricMac);
+        return BitWardenCipherService.DecryptStringWithAesCbc256HmacSha256Base64(cipherString, keys.SymmetricKey, keys.SymmetricMac);
     }
 
     public byte[] GetClearBytesWithRSAKey(Guid? ownerId, string cipherString)
@@ -146,7 +128,7 @@ public class DatabaseSession
             return null;
 
         var keys = _GetUserKeys(ownerId);
-        return BitWardenCipherService.DecryptWithRSAKey(cipherString, keys.RSAKey);
+        return BitWardenCipherService.DecryptWithRsa2048OaepSha1Base64(cipherString, keys.RSAKey);
     }
 
     public byte[] GetClearBytesWithMasterKey(Guid? ownerId, string cipherString)
@@ -155,7 +137,7 @@ public class DatabaseSession
             return null;
 
         var keys = _GetUserKeys(ownerId);
-        return BitWardenCipherService.DecryptWithMasterKey(cipherString, keys.SymmetricKey, keys.SymmetricMac);
+        return BitWardenCipherService.DecryptWithAesCbc256HmacSha256Base64(cipherString, keys.SymmetricKey, keys.SymmetricMac);
     }
 
     public string CryptClearStringWithRSAKey(Guid? ownerId, string clearString)
@@ -164,7 +146,7 @@ public class DatabaseSession
             return null;
 
         var keys = _GetUserKeys(ownerId);
-        return BitWardenCipherService.EncryptWithRSAKey(Encoding.UTF8.GetBytes(clearString), keys.RSAKey);
+        return BitWardenCipherService.EncryptWithRsa2048OaepSha1Base64(Encoding.UTF8.GetBytes(clearString), keys.RSAKey);
     }
 
     public string CryptClearStringWithMasterKey(Guid? ownerId, string clearString)
@@ -173,7 +155,7 @@ public class DatabaseSession
             return null;
 
         var keys = _GetUserKeys(ownerId);
-        return BitWardenCipherService.EncryptWithMasterKey(Encoding.UTF8.GetBytes(clearString), keys.SymmetricKey, keys.SymmetricMac);
+        return BitWardenCipherService.EncryptWithAesCbc256HmacSha256Base64(Encoding.UTF8.GetBytes(clearString), keys.SymmetricKey, keys.SymmetricMac);
     }
 
     public string CryptClearBytesWithRSAKey(Guid? ownerId, byte[] bytes)
@@ -182,7 +164,7 @@ public class DatabaseSession
             return null;
 
         var keys = _GetUserKeys(ownerId);
-        return BitWardenCipherService.EncryptWithRSAKey(bytes, keys.RSAKey);
+        return BitWardenCipherService.EncryptWithRsa2048OaepSha1Base64(bytes, keys.RSAKey);
     }
 
     public string CryptClearBytesWithMasterKey(Guid? ownerId, byte[] bytes)
@@ -191,7 +173,7 @@ public class DatabaseSession
             return null;
 
         var keys = _GetUserKeys(ownerId);
-        return BitWardenCipherService.EncryptWithMasterKey(bytes, keys.SymmetricKey, keys.SymmetricMac);
+        return BitWardenCipherService.EncryptWithAesCbc256HmacSha256Base64(bytes, keys.SymmetricKey, keys.SymmetricMac);
     }
 
     public FolderItemModel GetItemFolder(Guid? id)
@@ -201,7 +183,7 @@ public class DatabaseSession
 
         return Database.Folders.Find(e => e.Id == id);
     }
-    
+
     public List<CollectionItemModel> GetItemCollections(IEnumerable<Guid> ids)
     {
         return ids == null
@@ -209,5 +191,10 @@ public class DatabaseSession
             : ids.Select(id => Database.Collections.Find(e => e.Id == id))
                 .Where(c => c != null)
                 .ToList();
+    }
+
+    public void CreateNewDatabase()
+    {
+        Database = new DatabaseModel(this);
     }
 }

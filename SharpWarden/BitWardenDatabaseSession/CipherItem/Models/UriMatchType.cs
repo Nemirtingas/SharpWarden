@@ -1,6 +1,6 @@
 namespace SharpWarden.BitWardenDatabaseSession.CipherItem.Models;
 
-public enum UrlMatchType
+public enum UriMatchType
 {
     Domain = 0,
     Host = 1,

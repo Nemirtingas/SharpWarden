@@ -20,13 +20,13 @@ public class OrganizationModel
     public string FamilySponsorshipFriendlyName { get; set; }
 
     [JsonProperty("familySponsorshipLastSyncDate")]
-    public DateTimeOffset? FamilySponsorshipLastSyncDate { get; set; }
+    public DateTime? FamilySponsorshipLastSyncDate { get; set; }
 
     [JsonProperty("familySponsorshipToDelete")]
     public bool? FamilySponsorshipToDelete { get; set; }
 
     [JsonProperty("familySponsorshipValidUntil")]
-    public DateTimeOffset? FamilySponsorshipValidUntil { get; set; }
+    public DateTime? FamilySponsorshipValidUntil { get; set; }
 
     [JsonProperty("hasPublicAndPrivateKeys")]
     public bool HasPublicAndPrivateKeys { get; set; }

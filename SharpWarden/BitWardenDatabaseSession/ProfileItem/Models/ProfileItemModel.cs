@@ -20,8 +20,8 @@ public class ProfileItemModel : IDatabaseSessionModel
     {
         _DatabaseSession = databaseSession;
 
-        Key = new EncryptedString(Key.CipherString, _DatabaseSession);
-        PrivateKey = new EncryptedString(PrivateKey.CipherString, _DatabaseSession);
+        Key?.SetDatabaseSession(_DatabaseSession);
+        PrivateKey?.SetDatabaseSession(_DatabaseSession);
     }
 
     public void SetDatabaseSession(DatabaseSession databaseSession, Guid? organizationId)
@@ -34,7 +34,7 @@ public class ProfileItemModel : IDatabaseSessionModel
     public string AvatarColor { get; set; }
 
     [JsonProperty("creationDate")]
-    public DateTimeOffset? CreationDate { get; set; }
+    public DateTime? CreationDate { get; set; }
 
     [JsonProperty("culture")]
     public string Culture { get; set; }

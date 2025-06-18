@@ -19,23 +19,23 @@ public class IdentityFieldModel : IDatabaseSessionModel
     {
         _DatabaseSession = databaseSession;
 
-        Address1 = new EncryptedString(Address1.CipherString, databaseSession);
-        Address2 = new EncryptedString(Address2.CipherString, databaseSession);
-        Address3 = new EncryptedString(Address3.CipherString, databaseSession);
-        City = new EncryptedString(City.CipherString, databaseSession);
-        Company = new EncryptedString(Company.CipherString, databaseSession);
-        Country = new EncryptedString(Country.CipherString, databaseSession);
-        Email = new EncryptedString(Email.CipherString, databaseSession);
-        FirstName = new EncryptedString(FirstName.CipherString, databaseSession);
-        LastName = new EncryptedString(LastName.CipherString, databaseSession);
-        LicenseNumber = new EncryptedString(LicenseNumber.CipherString, databaseSession);
-        MiddleName = new EncryptedString(MiddleName.CipherString, databaseSession);
-        PassportNumber = new EncryptedString(PassportNumber.CipherString, databaseSession);
-        Phone = new EncryptedString(Phone.CipherString, databaseSession);
-        PostalCode = new EncryptedString(PostalCode.CipherString, databaseSession);
-        SSN = new EncryptedString(SSN.CipherString, databaseSession);
-        State = new EncryptedString(State.CipherString, databaseSession);
-        Title = new EncryptedString(Title.CipherString, databaseSession);
+        Address1?.SetDatabaseSession(_DatabaseSession);
+        Address2?.SetDatabaseSession(_DatabaseSession);
+        Address3?.SetDatabaseSession(_DatabaseSession);
+        City?.SetDatabaseSession(_DatabaseSession);
+        Company?.SetDatabaseSession(_DatabaseSession);
+        Country?.SetDatabaseSession(_DatabaseSession);
+        Email?.SetDatabaseSession(_DatabaseSession);
+        FirstName?.SetDatabaseSession(_DatabaseSession);
+        LastName?.SetDatabaseSession(_DatabaseSession);
+        LicenseNumber?.SetDatabaseSession(_DatabaseSession);
+        MiddleName?.SetDatabaseSession(_DatabaseSession);
+        PassportNumber?.SetDatabaseSession(_DatabaseSession);
+        Phone?.SetDatabaseSession(_DatabaseSession);
+        PostalCode?.SetDatabaseSession(_DatabaseSession);
+        SSN?.SetDatabaseSession(_DatabaseSession);
+        State?.SetDatabaseSession(_DatabaseSession);
+        Title?.SetDatabaseSession(_DatabaseSession);
     }
 
     public void SetDatabaseSession(DatabaseSession databaseSession, Guid? organizationId)
@@ -43,23 +43,23 @@ public class IdentityFieldModel : IDatabaseSessionModel
         _DatabaseSession = databaseSession;
         _OrganizationId = organizationId;
 
-        Address1 = new EncryptedString(Address1.CipherString, databaseSession, _OrganizationId);
-        Address2 = new EncryptedString(Address2.CipherString, databaseSession, _OrganizationId);
-        Address3 = new EncryptedString(Address3.CipherString, databaseSession, _OrganizationId);
-        City = new EncryptedString(City.CipherString, databaseSession, _OrganizationId);
-        Company = new EncryptedString(Company.CipherString, databaseSession, _OrganizationId);
-        Country = new EncryptedString(Country.CipherString, databaseSession, _OrganizationId);
-        Email = new EncryptedString(Email.CipherString, databaseSession, _OrganizationId);
-        FirstName = new EncryptedString(FirstName.CipherString, databaseSession, _OrganizationId);
-        LastName = new EncryptedString(LastName.CipherString, databaseSession, _OrganizationId);
-        LicenseNumber = new EncryptedString(LicenseNumber.CipherString, databaseSession, _OrganizationId);
-        MiddleName = new EncryptedString(MiddleName.CipherString, databaseSession, _OrganizationId);
-        PassportNumber = new EncryptedString(PassportNumber.CipherString, databaseSession, _OrganizationId);
-        Phone = new EncryptedString(Phone.CipherString, databaseSession, _OrganizationId);
-        PostalCode = new EncryptedString(PostalCode.CipherString, databaseSession, _OrganizationId);
-        SSN = new EncryptedString(SSN.CipherString, databaseSession, _OrganizationId);
-        State = new EncryptedString(State.CipherString, databaseSession, _OrganizationId);
-        Title = new EncryptedString(Title.CipherString, databaseSession, _OrganizationId);
+        Address1?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        Address2?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        Address3?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        City?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        Company?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        Country?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        Email?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        FirstName?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        LastName?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        LicenseNumber?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        MiddleName?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        PassportNumber?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        Phone?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        PostalCode?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        SSN?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        State?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        Title?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
     }
 
     [JsonProperty("address1")]

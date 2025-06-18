@@ -3,12 +3,12 @@ using SharpWarden.BitWardenDatabaseSession.Models;
 
 namespace SharpWarden.BitWardenDatabaseSession.CipherItem.Models;
 
-public class UrlModel : IDatabaseSessionModel
+public class UriModel : IDatabaseSessionModel
 {
     private DatabaseSession _DatabaseSession;
     private Guid? _OrganizationId;
 
-    public UrlModel(DatabaseSession databaseSession)
+    public UriModel(DatabaseSession databaseSession)
     {
         SetDatabaseSession(databaseSession);
     }
@@ -19,8 +19,8 @@ public class UrlModel : IDatabaseSessionModel
     {
         _DatabaseSession = databaseSession;
 
-        Uri = new EncryptedString(Uri.CipherString, databaseSession);
-        UriChecksum = new EncryptedString(UriChecksum.CipherString, databaseSession);
+        Uri?.SetDatabaseSession(_DatabaseSession);
+        UriChecksum?.SetDatabaseSession(_DatabaseSession);
     }
 
     public void SetDatabaseSession(DatabaseSession databaseSession, Guid? organizationId)
@@ -28,12 +28,12 @@ public class UrlModel : IDatabaseSessionModel
         _DatabaseSession = databaseSession;
         _OrganizationId = organizationId;
 
-        Uri = new EncryptedString(Uri.CipherString, databaseSession);
-        UriChecksum = new EncryptedString(UriChecksum.CipherString, databaseSession);
+        Uri?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        UriChecksum?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
     }
 
     [JsonProperty("match")]
-    public UrlMatchType? Match { get; set; }
+    public UriMatchType? Match { get; set; }
 
     [JsonProperty("uri")]
     public EncryptedString Uri { get; set; }

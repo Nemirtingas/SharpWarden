@@ -18,7 +18,7 @@ public class FolderItemModel : IDatabaseSessionModel
     {
         _DatabaseSession = databaseSession;
 
-        Name = new EncryptedString(Name.CipherString, databaseSession);
+        Name?.SetDatabaseSession(_DatabaseSession);
     }
 
     public void SetDatabaseSession(DatabaseSession databaseSession, Guid? organizationId)
@@ -34,5 +34,5 @@ public class FolderItemModel : IDatabaseSessionModel
     public ObjectType ObjectType { get; set; } = ObjectType.Folder;
 
     [JsonProperty("revisionDate")]
-    public DateTimeOffset? RevisionDate { get; set; }
+    public DateTime? RevisionDate { get; set; }
 }

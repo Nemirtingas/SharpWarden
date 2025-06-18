@@ -8,6 +8,7 @@ using SharpWarden.BitWardenDatabaseSession.Models;
 using SharpWarden.BitWardenDatabaseSession.FolderItem.Models;
 using SharpWarden.BitWardenDatabaseSession.CipherItem.Models;
 using SharpWarden.BitWardenDatabaseSession.ProfileItem.Models;
+using SharpWarden.BitWardenDatabaseSession;
 
 namespace SharpWarden.WebClient;
 
@@ -18,6 +19,7 @@ public class WebClient
     private LoginModel _WebSession;
     private string _Username;
     private JsonSerializer _JsonSerializer;
+    private DatabaseSession _DatabaseSession;
 
     public WebClient(string baseUrl)
     {
@@ -50,6 +52,12 @@ public class WebClient
     public int UserKdfIterations => _WebSession.KdfIterations;
     public string UserKey => _WebSession.Key;
     public string UserPrivateKey => _WebSession.PrivateKey;
+
+    private void _ApplyDatabaseSession(IDatabaseSessionModel sessionModel)
+    {
+        if (_DatabaseSession != null)
+            sessionModel.SetDatabaseSession(_DatabaseSession);
+    }
 
     public async Task<bool> PreloginAsync(string username)
     {
@@ -115,7 +123,7 @@ public class WebClient
 
         _HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _WebSession.AccessToken);
 
-        var profile = await GetProfileAsync();
+        var profile = await GetAccountProfileAsync();
 
         _WebSession.Key = profile.Key.CipherString;
         _WebSession.PrivateKey = profile.PrivateKey.CipherString;
@@ -123,62 +131,315 @@ public class WebClient
         return true;
     }
 
+    public void LinkDatabaseSession(DatabaseSession databaseSession)
+    {
+        _DatabaseSession = databaseSession;
+    }
+
+    #region Common API
+
+    private async Task<Stream> _GetAPIAsync(string apiPath)
+    {
+        var response = await _HttpClient.GetAsync(apiPath);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsStreamAsync();
+    }
+
+    private async Task<T> _GetAPIAsync<T>(string apiPath) where T : IDatabaseSessionModel
+    {
+        var response = await _HttpClient.GetAsync(apiPath);
+        response.EnsureSuccessStatusCode();
+        var result = _Deserialize<T>(await response.Content.ReadAsStreamAsync());
+        _ApplyDatabaseSession(result);
+        return result;
+    }
+
+    private async Task<ApiResultModel<List<T>>> _GetAllAPIAsync<T>(string apiPath) where T : IDatabaseSessionModel
+    {
+        var response = await _HttpClient.GetAsync(apiPath);
+        response.EnsureSuccessStatusCode();
+        var result = _Deserialize<ApiResultModel<List<T>>>(await response.Content.ReadAsStreamAsync());
+        foreach (var v in result.Data)
+            _ApplyDatabaseSession(v);
+
+        return result;
+    }
+
+    private async Task<T> _CreateAPIAsync<T, U>(string apiPath, U apiModel) where T : IDatabaseSessionModel
+    {
+        var content = _APIModelToContent(apiModel);
+
+        var response = await _HttpClient.PostAsync(apiPath, content);
+        response.EnsureSuccessStatusCode();
+        var result = _Deserialize<T>(await response.Content.ReadAsStreamAsync());
+        _ApplyDatabaseSession(result);
+        return result;
+    }
+
+    private async Task<T> _UpdateAPIAsync<T, U>(string apiPath, Guid id, U apiModel) where T : IDatabaseSessionModel
+    {
+        var content = _APIModelToContent(apiModel);
+
+        var response = await _HttpClient.PutAsync($"{apiPath}/{id}", content);
+        response.EnsureSuccessStatusCode();
+        var result = _Deserialize<T>(await response.Content.ReadAsStreamAsync());
+        _ApplyDatabaseSession(result);
+        return result;
+    }
+
+    private async Task _DeleteAPIAsync(string apiPath, Guid id)
+    {
+        var response = await _HttpClient.DeleteAsync($"{apiPath}/{id}");
+        response.EnsureSuccessStatusCode();
+    }
+
+    private async Task _MultiDeleteAPIAsync(string apiPath, IEnumerable<Guid> ids)
+    {
+        var apiModel = new MultiDeleteRequestAPIModel();
+
+        var content = _APIModelToContent(apiModel);
+
+        var response = await _HttpClient.PutAsync($"{apiPath}/delete", content);
+        response.EnsureSuccessStatusCode();
+    }
+
+    #endregion
+
+    #region CipherItem API
+
+    const string CiphersApiPath = "/api/ciphers";
+
+    private void _FillCipherItemAPIModel(CipherItemBaseRequestAPIModel apiModel, CipherItemModel itemModel)
+    {
+        apiModel.Name = itemModel.Name?.CipherString;
+        apiModel.Notes = itemModel.Notes?.CipherString;
+        apiModel.Favorite = itemModel.Favorite;
+        apiModel.FolderId = itemModel.FolderId;
+        apiModel.OrganizationId = itemModel.OrganizationId;
+        apiModel.Fields = itemModel.Fields == null ? null : new List<CustomFieldAPIModel>(itemModel.Fields.Select(e => new CustomFieldAPIModel
+        {
+            Type = e.Type,
+            Name = e.Name?.CipherString,
+            Value = e.Value?.CipherString,
+            LinkedId = e.LinkedId,
+        }));
+        apiModel.Reprompt = itemModel.Reprompt;
+        apiModel.LastKnownRevisionDate = null;
+    }
+
+    private CipherItemLoginRequestAPIModel _BuildCipherItemLoginRequestAsync(CipherItemModel itemModel)
+    {
+        var apiModel = new CipherItemLoginRequestAPIModel
+        {
+            Login = new CipherLoginAPIModel
+            {
+                AutofillOnPageLoad = itemModel.Login.AutoFillOnPageLoad,
+                Password = itemModel.Login.Password?.CipherString,
+                PasswordRevisionDate = itemModel.Login.PasswordRevisionDate,
+                TOTP = itemModel.Login.TOTP?.CipherString,
+                Uris = itemModel.Login.Uris == null ? null : new List<CipherLoginUriAPIModel>(itemModel.Login.Uris.Select(e => new CipherLoginUriAPIModel
+                {
+                    Uri = e.Uri?.CipherString,
+                    UriChecksum = e.UriChecksum?.CipherString,
+                    Match = e.Match,
+                })),
+                Username = itemModel.Login.Username?.CipherString,
+            }
+        };
+        _FillCipherItemAPIModel(apiModel, itemModel);
+        return apiModel;
+    }
+
+    private CipherItemSecureNoteRequestAPIModel _BuildCipherItemSecureNoteRequestAsync(CipherItemModel itemModel)
+    {
+        var apiModel = new CipherItemSecureNoteRequestAPIModel
+        {
+            SecureNote = new CipherSecureNoteAPIModel
+            {
+                SecureNoteType = itemModel.SecureNote.Type,
+            }
+        };
+        _FillCipherItemAPIModel(apiModel, itemModel);
+        return apiModel;
+    }
+
+    private CipherItemCardRequestAPIModel _BuildCipherItemCardRequestAsync(CipherItemModel itemModel)
+    {
+        var apiModel = new CipherItemCardRequestAPIModel
+        {
+            Card = new CipherCardAPIModel
+            {
+                Brand = itemModel.Card.Brand?.CipherString,
+                CardholderName = itemModel.Card.CardholderName?.CipherString,
+                Code = itemModel.Card.Code?.CipherString,
+                ExpMonth = itemModel.Card.ExpMonth?.CipherString,
+                ExpYear = itemModel.Card.ExpYear?.CipherString,
+                Number = itemModel.Card.Number?.CipherString,
+            }
+        };
+        _FillCipherItemAPIModel(apiModel, itemModel);
+        return apiModel;
+    }
+
+    private CipherItemIdentityRequestAPIModel _BuildCipherItemIdentityRequestAsync(CipherItemModel itemModel)
+    {
+        var apiModel = new CipherItemIdentityRequestAPIModel
+        {
+            Identity = new CipherIdentityAPIModel
+            {
+                Address1 = itemModel.Identity.Address1?.CipherString,
+                Address2 = itemModel.Identity.Address2?.CipherString,
+                Address3 = itemModel.Identity.Address3?.CipherString,
+                City = itemModel.Identity.City?.CipherString,
+                Company = itemModel.Identity.Company?.CipherString,
+                Country = itemModel.Identity.Country?.CipherString,
+                Email = itemModel.Identity.Email?.CipherString,
+                FirstName = itemModel.Identity.FirstName?.CipherString,
+                LastName = itemModel.Identity.LastName?.CipherString,
+                LicenseNumber = itemModel.Identity.LicenseNumber?.CipherString,
+                MiddleName = itemModel.Identity.MiddleName?.CipherString,
+                PassportNumber = itemModel.Identity.PassportNumber?.CipherString,
+                Phone = itemModel.Identity.Phone?.CipherString,
+                PostalCode = itemModel.Identity.PostalCode?.CipherString,
+                SSN = itemModel.Identity.SSN?.CipherString,
+                State = itemModel.Identity.State?.CipherString,
+                Title = itemModel.Identity.Title?.CipherString,
+                Username = itemModel.Identity.Username?.CipherString,
+            }
+        };
+        _FillCipherItemAPIModel(apiModel, itemModel);
+        return apiModel;
+    }
+
     public async Task<CipherItemModel> GetCipherItemAsync(Guid id)
     {
-        var response = await _HttpClient.GetAsync($"/api/ciphers/{id}");
-        response.EnsureSuccessStatusCode();
-        return _Deserialize<CipherItemModel>(await response.Content.ReadAsStreamAsync());
+        return await _GetAPIAsync<CipherItemModel>($"{CiphersApiPath}/{id}");
     }
 
     public async Task<List<CipherItemModel>> GetCipherItemsAsync()
     {
-        var response = await _HttpClient.GetAsync("/api/ciphers");
-        response.EnsureSuccessStatusCode();
-        return _Deserialize<ApiResultModel<List<CipherItemModel>>>(await response.Content.ReadAsStreamAsync()).Data;
+        return (await _GetAllAPIAsync<CipherItemModel>(CiphersApiPath)).Data;
+    }
+
+    public async Task<AttachmentModel> GetCipherItemAttachmentAsync(Guid id, string attachmentId)
+    {
+        return await _GetAPIAsync<AttachmentModel>($"{CiphersApiPath}/{id}/attachment/{attachmentId}");
+    }
+
+    public async Task<CipherItemModel> CreateCipherItemAsync(CipherItemModel cipherItem)
+    {
+        switch (cipherItem.ItemType)
+        {
+            case CipherItemType.Login: return await _CreateAPIAsync<CipherItemModel, CipherItemLoginRequestAPIModel>(CiphersApiPath, _BuildCipherItemLoginRequestAsync(cipherItem));
+            case CipherItemType.SecureNote: return await _CreateAPIAsync<CipherItemModel, CipherItemSecureNoteRequestAPIModel>(CiphersApiPath, _BuildCipherItemSecureNoteRequestAsync(cipherItem));
+            case CipherItemType.Card: return await _CreateAPIAsync<CipherItemModel, CipherItemCardRequestAPIModel>(CiphersApiPath, _BuildCipherItemCardRequestAsync(cipherItem));
+            case CipherItemType.Identity: return await _CreateAPIAsync<CipherItemModel, CipherItemIdentityRequestAPIModel>(CiphersApiPath, _BuildCipherItemIdentityRequestAsync(cipherItem));
+        }
+
+        throw new InvalidDataException($"Unhandled cipher item type: {cipherItem.ItemType}");
+    }
+
+    public async Task<CipherItemModel> UpdateCipherItemAsync<T>(Guid id, CipherItemModel cipherItem)
+    {
+        switch (cipherItem.ItemType)
+        {
+            case CipherItemType.Login     : return await _UpdateAPIAsync<CipherItemModel, CipherItemLoginRequestAPIModel>(CiphersApiPath, id, _BuildCipherItemLoginRequestAsync(cipherItem));
+            case CipherItemType.SecureNote: return await _UpdateAPIAsync<CipherItemModel, CipherItemSecureNoteRequestAPIModel>(CiphersApiPath, id, _BuildCipherItemSecureNoteRequestAsync(cipherItem));
+            case CipherItemType.Card      : return await _UpdateAPIAsync<CipherItemModel, CipherItemCardRequestAPIModel>(CiphersApiPath, id, _BuildCipherItemCardRequestAsync(cipherItem));
+            case CipherItemType.Identity  : return await _UpdateAPIAsync<CipherItemModel, CipherItemIdentityRequestAPIModel>(CiphersApiPath, id, _BuildCipherItemIdentityRequestAsync(cipherItem));
+        }
+
+        throw new InvalidDataException($"Unhandled cipher item type: {cipherItem.ItemType}");
+    }
+
+    public async Task DeleteCipherItemAsync(Guid id)
+    {
+        await _DeleteAPIAsync(CiphersApiPath, id);
+    }
+
+    public async Task DeleteCipherItemsAsync(IEnumerable<Guid> ids)
+    {
+        await _MultiDeleteAPIAsync(CiphersApiPath, ids);
+    }
+
+    #endregion
+
+    #region Folder API
+
+    const string FoldersApiPath = "/api/folders";
+
+    private FolderRequestAPIModel _BuildFolderRequestAPIModel(string encryptedName)
+    {
+        return new FolderRequestAPIModel
+        {
+            Name = encryptedName
+        };
+    }
+
+    public async Task<FolderItemModel> GetFolderAsync(Guid id)
+    {
+        return await _GetAPIAsync<FolderItemModel>($"{FoldersApiPath}/{id}");
+    }
+
+    public async Task<List<FolderItemModel>> GetFoldersAsync()
+    {
+        return (await _GetAllAPIAsync<FolderItemModel>(FoldersApiPath)).Data;
     }
 
     public async Task<FolderItemModel> CreateFolderAsync(string encryptedName)
     {
-        var content = _APIModelToContent(new CreateFolderAPIModel
+        return await _CreateAPIAsync<FolderItemModel, FolderRequestAPIModel>(FoldersApiPath, _BuildFolderRequestAPIModel(encryptedName));
+    }
+
+    public async Task<FolderItemModel> UpdateFolderAsync(Guid id, string encryptedName)
+    {
+        return await _UpdateAPIAsync<FolderItemModel, FolderRequestAPIModel>(FoldersApiPath, id, _BuildFolderRequestAPIModel(encryptedName));
+    }
+
+    public async Task DeleteFolderAsync(Guid id)
+    {
+        await _DeleteAPIAsync(FoldersApiPath, id);
+    }
+
+    public async Task DeleteFoldersAsync(IEnumerable<Guid> ids)
+    {
+        await _MultiDeleteAPIAsync(FoldersApiPath, ids);
+    }
+
+    public async Task DeleteAllFolderAsync()
+    {
+        var response = await _HttpClient.DeleteAsync($"/api/folders/all");
+        response.EnsureSuccessStatusCode();
+    }
+
+    #endregion
+
+    #region Attachment API
+
+    public async Task<Stream> GetAttachmentAsync(AttachmentModel attachment)
+    {
+        var attachmentStream = await _GetAPIAsync(attachment.Url);
+
+        if (_DatabaseSession != null)
         {
-            Name = encryptedName
-        });
+            var clearStream = new MemoryStream();
+            await BitWardenCipherService.DecryptWithAesCbc256HmacSha256Base64ByteStream(attachmentStream, clearStream, attachment.Key.ClearBytes);
+            attachmentStream = clearStream;
+            clearStream.Position = 0;
+        }
 
-        var response = await _HttpClient.PostAsync("/api/folders", content);
-        response.EnsureSuccessStatusCode();
-        return _Deserialize<FolderItemModel>(await response.Content.ReadAsStreamAsync());
+        return attachmentStream;
     }
 
-    public async Task<FolderItemModel> UpdateFolderAsync(Guid folderId, string encryptedName)
-    {
-        var content = _APIModelToContent(new UpdateFolderAPIModel
-        {
-            Name = encryptedName
-        });
+    #endregion
 
-        var response = await _HttpClient.PutAsync($"/api/folders/{folderId}", content);
-        response.EnsureSuccessStatusCode();
-        return _Deserialize<FolderItemModel>(await response.Content.ReadAsStreamAsync());
-    }
-
-    public async Task<FolderItemModel> DeleteFolderAsync(Guid folderId)
+    public async Task<ProfileItemModel> GetAccountProfileAsync()
     {
-        var response = await _HttpClient.DeleteAsync($"/api/folders/{folderId}");
-        response.EnsureSuccessStatusCode();
-        return _Deserialize<FolderItemModel>(await response.Content.ReadAsStreamAsync());
-    }
-
-    public async Task<ProfileItemModel> GetProfileAsync()
-    {
-        var response = await _HttpClient.GetAsync("/api/accounts/profile");
-        response.EnsureSuccessStatusCode();
-        return _Deserialize<ProfileItemModel>(await response.Content.ReadAsStreamAsync());
+        return await _GetAPIAsync<ProfileItemModel>("/api/accounts/profile");
     }
 
     public async Task<DatabaseModel> GetDatabaseAsync()
     {
-        var response = await _HttpClient.GetAsync("/api/sync?excludeDomains=true");
-        response.EnsureSuccessStatusCode();
-        return _Deserialize<DatabaseModel>(await response.Content.ReadAsStreamAsync());
+        return await _GetAPIAsync<DatabaseModel>("/api/sync?excludeDomains=true");
     }
 }

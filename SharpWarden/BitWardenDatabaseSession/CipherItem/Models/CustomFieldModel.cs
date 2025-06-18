@@ -19,8 +19,8 @@ public class CustomFieldModel : IDatabaseSessionModel
     {
         _DatabaseSession = databaseSession;
 
-        Name = new EncryptedString(Name.CipherString, _DatabaseSession);
-        Value = new EncryptedString(Value.CipherString, _DatabaseSession);
+        Name?.SetDatabaseSession(_DatabaseSession);
+        Value?.SetDatabaseSession(_DatabaseSession);
     }
 
     public void SetDatabaseSession(DatabaseSession databaseSession, Guid? organizationId)
@@ -28,8 +28,8 @@ public class CustomFieldModel : IDatabaseSessionModel
         _DatabaseSession = databaseSession;
         _OrganizationId = organizationId;
 
-        Name = new EncryptedString(Name.CipherString, _DatabaseSession, _OrganizationId);
-        Value = new EncryptedString(Value.CipherString, _DatabaseSession, _OrganizationId);
+        Name?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        Value?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
     }
 
     [JsonProperty("linkedId")]

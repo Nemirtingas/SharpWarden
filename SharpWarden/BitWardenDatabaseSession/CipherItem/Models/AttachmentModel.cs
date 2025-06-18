@@ -19,8 +19,8 @@ public class AttachmentModel : IDatabaseSessionModel
     {
         _DatabaseSession = databaseSession;
 
-        FileName = new EncryptedString(FileName.CipherString, _DatabaseSession);
-        Key = new EncryptedString(Key.CipherString, _DatabaseSession);
+        FileName?.SetDatabaseSession(_DatabaseSession);
+        Key?.SetDatabaseSession(_DatabaseSession);
     }
 
     public void SetDatabaseSession(DatabaseSession databaseSession, Guid? organizationId)
@@ -28,8 +28,8 @@ public class AttachmentModel : IDatabaseSessionModel
         _DatabaseSession = databaseSession;
         _OrganizationId = organizationId;
 
-        FileName = new EncryptedString(FileName.CipherString, _DatabaseSession, _OrganizationId);
-        Key = new EncryptedString(Key.CipherString, _DatabaseSession, _OrganizationId);
+        FileName?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
+        Key?.SetDatabaseSession(_DatabaseSession, _OrganizationId);
     }
 
     [JsonProperty("fileName")]
