@@ -1,17 +1,12 @@
 name: Publish to NuGet
 
 on:
-  workflow_run:
-    workflows: ["Test .NET Library"]
-    types:
-      - completed
   push:
     tags:
       - 'v*'
 
 jobs:
-  publish_on_tests:
-    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+  build:
     runs-on: ubuntu-latest
 
     steps:
