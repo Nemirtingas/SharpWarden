@@ -10,6 +10,19 @@ public enum ObjectType
     ProfileOrganization,
     [EnumMember(Value = "attachment")]
     Attachment,
+    /// <summary>
+    /// Has Login/Identity/Card/SecureNote/SSHKey, Id, Type, Name, Notes, Fields, PasswordHistory, RevisionDate, OrganizationId, Attachments, OrganizationUseTotp, CreationDate, DeletedDate, Reprompt, Key
+    /// </summary>
+    [EnumMember(Value = "cipherMini")]
+    CipherMini,
+    /// <summary>
+    /// Same as <see cref="CipherMini"/> but with FolderId, Favorite, Edit, ViewPassword, Permissions
+    /// </summary>
+    [EnumMember(Value = "cipher")]
+    Cipher,
+    /// <summary>
+    /// Same as <see cref="Cipher"/> but with CollectionsIds
+    /// </summary>
     [EnumMember(Value = "cipherDetails")]
     CipherDetails,
     [EnumMember(Value = "collectionDetails")]
@@ -22,4 +35,6 @@ public enum ObjectType
     Folder,
     [EnumMember(Value = "list")]
     List,
+    [EnumMember(Value = "attachment-fileUpload")]
+    AttachmentFileUpload,
 }

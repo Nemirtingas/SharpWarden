@@ -2,13 +2,13 @@ using System.Net.Http.Headers;
 using System.Text;
 using SharpWarden.BitWardenWebSession.Models;
 using SharpWarden.WebClient.Models;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SharpWarden.BitWardenDatabaseSession.Models;
-using SharpWarden.BitWardenDatabaseSession.FolderItem.Models;
-using SharpWarden.BitWardenDatabaseSession.CipherItem.Models;
-using SharpWarden.BitWardenDatabaseSession.ProfileItem.Models;
+using SharpWarden.BitWardenDatabaseSession.Models.FolderItem;
+using SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
+using SharpWarden.BitWardenDatabaseSession.Models.ProfileItem;
 using SharpWarden.BitWardenDatabaseSession;
+using SharpWarden.BitWardenDatabaseSession.Services;
 
 namespace SharpWarden.WebClient;
 
@@ -18,29 +18,27 @@ public class WebClient
     private readonly HttpClient _HttpClient;
     private LoginModel _WebSession;
     private string _Username;
-    private JsonSerializer _JsonSerializer;
-    private DatabaseSession _DatabaseSession;
+    private readonly ISessionJsonConverterService _JsonSerializer;
 
-    public WebClient(string baseUrl)
+    public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
+    public const string SSHKeyCipherMinimumVersion = "2024.12.0";
+    public const string DenyLegacyUserMinimumVersion = "2025.6.0";
+
+    public WebClient(
+        ISessionJsonConverterService jsonSerializer,
+        string baseUrl)
     {
+        _JsonSerializer = jsonSerializer;
         _Guid = Guid.NewGuid();
         _WebSession = new LoginModel();
-        _HttpClient = new HttpClient { BaseAddress = new Uri(baseUrl) };
-        _JsonSerializer = new JsonSerializer();
-        _JsonSerializer.Converters.Add(new EncryptedStringConverter());
+        _HttpClient = new HttpClient{ BaseAddress = new Uri(baseUrl) };
     }
 
     private T _Deserialize<T>(Stream stream)
-    {
-        using (var sr = new StreamReader(stream))
-        using (var jsonTextReader = new JsonTextReader(sr))
-        {
-            return _JsonSerializer.Deserialize<T>(jsonTextReader);
-        }
-    }
+        => _JsonSerializer.Deserialize<T>(stream);
 
     private string _Serialize<T>(T value)
-        => JsonConvert.SerializeObject(value);
+        => _JsonSerializer.Serialize(value);
 
     private StringContent _APIModelToContent<T>(T apiModel)
     {
@@ -53,13 +51,7 @@ public class WebClient
     public string UserKey => _WebSession.Key;
     public string UserPrivateKey => _WebSession.PrivateKey;
 
-    private void _ApplyDatabaseSession(IDatabaseSessionModel sessionModel)
-    {
-        if (_DatabaseSession != null)
-            sessionModel.SetDatabaseSession(_DatabaseSession);
-    }
-
-    public async Task<bool> PreloginAsync(string username)
+    public async Task PreloginAsync(string username)
     {
         var content = new StringContent(new JObject { { "email", username } }.ToString(), new UTF8Encoding(false), "application/json");
         var response = await _HttpClient.PostAsync("/identity/accounts/prelogin", content);
@@ -67,11 +59,17 @@ public class WebClient
 
         _WebSession.KdfIterations = _Deserialize<PreLoginModel>(await response.Content.ReadAsStreamAsync()).KdfIterations;
         _Username = username;
-
-        return true;
     }
 
-    public async Task<bool> AuthenticateAsync(string password)
+    /// <summary>
+    /// If <paramref name="deviceVersion"/> is not at least <see cref="SSHKeyCipherMinimumVersion"/>, ssh keys will not be returned by <see cref="GetDatabaseAsync"/>.
+    /// </summary>
+    /// <param name="password"></param>
+    /// <param name="deviceVersion"></param>
+    /// <param name="deviceType"></param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    public async Task AuthenticateAsync(string password, string deviceVersion = DenyLegacyUserMinimumVersion,  DeviceType deviceType = DeviceType.Sdk)
     {
         if (string.IsNullOrWhiteSpace(_Username) || !(_WebSession?.KdfIterations > 0))
             throw new InvalidOperationException("Prelogin must be called prior to " + nameof(AuthenticateAsync) + " .");
@@ -83,7 +81,7 @@ public class WebClient
         var parameters = new Dictionary<string, string>{
             { "scope"           , "api offline_access" },
             { "client_id"       , "web" },
-            { "deviceType"      , $"{(int)DeviceType.Sdk}" },
+            { "deviceType"      , $"{(int)deviceType}" },
             { "deviceIdentifier", _Guid.ToString() },
             { "deviceName"      , "SharpWarden" },
             { "grant_type"      , "password" },
@@ -99,11 +97,11 @@ public class WebClient
         _WebSession = _Deserialize<LoginModel>(await response.Content.ReadAsStreamAsync());
 
         _HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _WebSession.AccessToken);
-
-        return true;
+        _HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("Bitwarden-Client-Name", "web");
+        _HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("Bitwarden-Client-Version", deviceVersion);
     }
 
-    public async Task<bool> AuthenticateWithRefreshTokenAsync(string refreshToken)
+    public async Task AuthenticateWithRefreshTokenAsync(string refreshToken)
     {
         if (string.IsNullOrWhiteSpace(_Username) || !(_WebSession?.KdfIterations > 0))
             throw new InvalidOperationException("Prelogin must be called prior to " + nameof(AuthenticateWithRefreshTokenAsync) + " .");
@@ -127,13 +125,6 @@ public class WebClient
 
         _WebSession.Key = profile.Key.CipherString;
         _WebSession.PrivateKey = profile.PrivateKey.CipherString;
-
-        return true;
-    }
-
-    public void LinkDatabaseSession(DatabaseSession databaseSession)
-    {
-        _DatabaseSession = databaseSession;
     }
 
     #region Common API
@@ -145,51 +136,46 @@ public class WebClient
         return await response.Content.ReadAsStreamAsync();
     }
 
-    private async Task<T> _GetAPIAsync<T>(string apiPath) where T : IDatabaseSessionModel
+    private async Task<T> _GetAPIAsync<T>(string apiPath)
     {
         var response = await _HttpClient.GetAsync(apiPath);
         response.EnsureSuccessStatusCode();
         var result = _Deserialize<T>(await response.Content.ReadAsStreamAsync());
-        _ApplyDatabaseSession(result);
         return result;
     }
 
-    private async Task<ApiResultModel<List<T>>> _GetAllAPIAsync<T>(string apiPath) where T : IDatabaseSessionModel
+    private async Task<ApiResultModel<List<T>>> _GetAllAPIAsync<T>(string apiPath) where T : ISessionAware
     {
         var response = await _HttpClient.GetAsync(apiPath);
         response.EnsureSuccessStatusCode();
         var result = _Deserialize<ApiResultModel<List<T>>>(await response.Content.ReadAsStreamAsync());
-        foreach (var v in result.Data)
-            _ApplyDatabaseSession(v);
 
         return result;
     }
 
-    private async Task<T> _CreateAPIAsync<T, U>(string apiPath, U apiModel) where T : IDatabaseSessionModel
+    private async Task<T> _CreateAPIAsync<T, U>(string apiPath, U apiModel) where T : ISessionAware
     {
         var content = _APIModelToContent(apiModel);
 
         var response = await _HttpClient.PostAsync(apiPath, content);
         response.EnsureSuccessStatusCode();
         var result = _Deserialize<T>(await response.Content.ReadAsStreamAsync());
-        _ApplyDatabaseSession(result);
         return result;
     }
 
-    private async Task<T> _UpdateAPIAsync<T, U>(string apiPath, Guid id, U apiModel) where T : IDatabaseSessionModel
+    private async Task<T> _UpdateAPIAsync<T, U>(string apiPath, Guid id, U apiModel) where T : ISessionAware
     {
         var content = _APIModelToContent(apiModel);
 
         var response = await _HttpClient.PutAsync($"{apiPath}/{id}", content);
         response.EnsureSuccessStatusCode();
         var result = _Deserialize<T>(await response.Content.ReadAsStreamAsync());
-        _ApplyDatabaseSession(result);
         return result;
     }
 
-    private async Task _DeleteAPIAsync(string apiPath, Guid id)
+    private async Task _DeleteAPIAsync(string apiPath)
     {
-        var response = await _HttpClient.DeleteAsync($"{apiPath}/{id}");
+        var response = await _HttpClient.DeleteAsync(apiPath);
         response.EnsureSuccessStatusCode();
     }
 
@@ -326,6 +312,54 @@ public class WebClient
         return await _GetAPIAsync<AttachmentModel>($"{CiphersApiPath}/{id}/attachment/{attachmentId}");
     }
 
+    public async Task<AttachmentModel> CreateCipherItemAttachmentAsync(Guid id, string encryptedFileName, string encryptedKey, Stream attachmentStream)
+    {
+        var createAttachmentModel = new CipherItemCreateAttachmentRequestAPIModel
+        {
+            AdminRequest = false,
+            FileSize = attachmentStream.Length,
+            FileName = encryptedFileName,
+            Key = encryptedKey
+        };
+
+        var content = _APIModelToContent(createAttachmentModel);
+
+        var response = await _HttpClient.PostAsync($"{CiphersApiPath}/{id}/attachment/v2", content);
+        response.EnsureSuccessStatusCode();
+        var newAttachment = _Deserialize<CreateCipherItemAttachmentResponseAPIResultModel>(await response.Content.ReadAsStreamAsync());
+        try
+        {
+            using var form = new MultipartFormDataContent();
+
+            var fileContent = new StreamContent(attachmentStream);
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+
+            form.Add(fileContent, "data", encryptedFileName);
+
+            response = await _HttpClient.PostAsync($"{CiphersApiPath}/{id}/attachment/{newAttachment.AttachmentId}", form);
+            response.EnsureSuccessStatusCode();
+        }
+        catch
+        {
+            try
+            {
+                await DeleteCipherItemAttachmentAsync(id, newAttachment.AttachmentId);
+            }
+            catch
+            {
+
+            }
+            throw;
+        }
+
+        return newAttachment.CipherResponse.Attachments.Find(e => e.Id == newAttachment.AttachmentId);
+    }
+
+    public async Task DeleteCipherItemAttachmentAsync(Guid id, string attachmentId)
+    {
+        await _DeleteAPIAsync($"{CiphersApiPath}/{id}/attachment/{attachmentId}");
+    }
+
     public async Task<CipherItemModel> CreateCipherItemAsync(CipherItemModel cipherItem)
     {
         switch (cipherItem.ItemType)
@@ -354,7 +388,7 @@ public class WebClient
 
     public async Task DeleteCipherItemAsync(Guid id)
     {
-        await _DeleteAPIAsync(CiphersApiPath, id);
+        await _DeleteAPIAsync($"{CiphersApiPath}/{id}");
     }
 
     public async Task DeleteCipherItemsAsync(IEnumerable<Guid> ids)
@@ -398,7 +432,7 @@ public class WebClient
 
     public async Task DeleteFolderAsync(Guid id)
     {
-        await _DeleteAPIAsync(FoldersApiPath, id);
+        await _DeleteAPIAsync($"{FoldersApiPath}/{id}");
     }
 
     public async Task DeleteFoldersAsync(IEnumerable<Guid> ids)
@@ -418,17 +452,7 @@ public class WebClient
 
     public async Task<Stream> GetAttachmentAsync(AttachmentModel attachment)
     {
-        var attachmentStream = await _GetAPIAsync(attachment.Url);
-
-        if (_DatabaseSession != null)
-        {
-            var clearStream = new MemoryStream();
-            await BitWardenCipherService.DecryptWithAesCbc256HmacSha256Base64ByteStream(attachmentStream, clearStream, attachment.Key.ClearBytes);
-            attachmentStream = clearStream;
-            clearStream.Position = 0;
-        }
-
-        return attachmentStream;
+        return await _GetAPIAsync(attachment.Url);
     }
 
     #endregion
@@ -438,8 +462,9 @@ public class WebClient
         return await _GetAPIAsync<ProfileItemModel>("/api/accounts/profile");
     }
 
-    public async Task<DatabaseModel> GetDatabaseAsync()
+    public async Task<DatabaseModel> GetDatabaseAsync(bool excludeDomains = true)
     {
-        return await _GetAPIAsync<DatabaseModel>("/api/sync?excludeDomains=true");
+        var strBool = excludeDomains ? "true" : "false"; // Because bool.ToString() is CamelCase
+        return await _GetAPIAsync<DatabaseModel>($"/api/sync?excludeDomains={strBool}");
     }
 }

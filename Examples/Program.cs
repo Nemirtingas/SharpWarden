@@ -1,16 +1,21 @@
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.DependencyInjection;
 using SharpWarden;
-using SharpWarden.BitWardenDatabaseSession;
-using SharpWarden.BitWardenDatabaseSession.CipherItem.Models;
-using SharpWarden.BitWardenDatabaseSession.CollectionItem.Models;
-using SharpWarden.BitWardenDatabaseSession.FolderItem.Models;
+using SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
+using SharpWarden.BitWardenDatabaseSession.Models.CollectionItem;
+using SharpWarden.BitWardenDatabaseSession.Models.FolderItem;
+using SharpWarden.BitWardenDatabaseSession.Services;
 
 namespace SharpWardenExamples;
 
 class Example
 {
-    static DatabaseSession BitwardenDatabaseSession;
+    static IServiceScope BitWardenDatabaseSessionScope;
+    static SharpWarden.WebClient.WebClient VaultWebClient;
+    static IVaultService VaultService;
+    static IUserCryptoService UserCryptoService;
 
     static void Main()
     {
@@ -23,7 +28,7 @@ class Example
             ? name.Split('.')[^1]
             : name;
 
-        if (str.CipherString != null)
+        if (str?.CipherString != null)
         {
             if (str.HasSession())
             {
@@ -153,8 +158,8 @@ class Example
         if (collectionsIds?.Any() != true)
             return;
 
-        var collections = BitwardenDatabaseSession.GetItemCollections(collectionsIds);
-
+        var collections = VaultService.GetBitWardenDatabase().Collections.Where(e => collectionsIds.Contains(e.Id.Value));
+        
         foreach (var collection in collections)
         {
             PrintCollection(collection);
@@ -164,18 +169,18 @@ class Example
 
     static void PrintCipherItem(CipherItemModel item)
     {
-        string folder = BitwardenDatabaseSession.GetItemFolder(item.FolderId)?.Name.ClearString;
+        var folder = VaultService.GetBitWardenDatabase().Folders.Find(e => e.Id == item.FolderId)?.Name.ClearString;
         if (folder != null)
             folder = "/" + folder;
-
+        
         Console.WriteLine("================================");
         Console.WriteLine($"Item: {folder}/{item.Id}");
-
+        
         PrintField(item.FolderId?.ToString(), "FolderId");
         PrintField(item.OrganizationId?.ToString(), "OrganizationId");
         PrintCipherField(item.Name);
         PrintCipherField(item.Notes);
-
+        
         switch (item.ItemType)
         {
             case CipherItemType.Login: PrintLoginField(item.Login); break;
@@ -183,129 +188,127 @@ class Example
             case CipherItemType.SecureNote: PrintSecureNoteField(item.SecureNote); break;
             case CipherItemType.Card: PrintCardField(item.Card); break;
         }
-
+        
         PrintCollectionsFromIds(item.CollectionsIds);
         PrintCustomFields(item.Fields);
         PrintAttachments(item.Attachments);
-
+        
         Console.WriteLine();
     }
 
-    static void PrintCipherItems(IEnumerable<CipherItemModel> items)
+    static void PrintCipherItems()
     {
-        foreach (var item in items)
+        foreach (var item in VaultService.GetBitWardenDatabase().Items)
             PrintCipherItem(item);
     }
 
-    static async Task TestFolderAsync(SharpWarden.WebClient.WebClient webClient)
+    static async Task TestFolderAsync()
     {
-        webClient.LinkDatabaseSession(BitwardenDatabaseSession);
-        var cryptString = new EncryptedString(BitwardenDatabaseSession);
-
+        var cryptString = new EncryptedString(UserCryptoService);
+        
         cryptString.ClearString = "TestDirectory";
-
+        
         var x = cryptString;
-
-        var folder = await webClient.CreateFolderAsync(cryptString.CipherString);
-
+        
+        var folder = await VaultWebClient.CreateFolderAsync(cryptString.CipherString);
+        
         Console.WriteLine($"Folder created: {folder.Id}, {folder.Name.ClearString}");
-
+        
         cryptString.ClearString = "Renamed TestDirectory";
-
-        folder = await webClient.UpdateFolderAsync(folder.Id.Value, cryptString.CipherString);
-
+        
+        folder = await VaultWebClient.UpdateFolderAsync(folder.Id.Value, cryptString.CipherString);
+        
         Console.WriteLine($"Folder updated: {folder.Id}, {folder.Name.ClearString}");
-
-        var folders = await webClient.GetFoldersAsync();
-
-        folder = await webClient.GetFolderAsync(folder.Id.Value);
-
-        await webClient.DeleteFolderAsync(folder.Id.Value);
-
+        
+        var folders = await VaultWebClient.GetFoldersAsync();
+        
+        folder = await VaultWebClient.GetFolderAsync(folder.Id.Value);
+        
+        await VaultWebClient.DeleteFolderAsync(folder.Id.Value);
+        
         try
         {
-            folder = await webClient.GetFolderAsync(folder.Id.Value);
+            folder = await VaultWebClient.GetFolderAsync(folder.Id.Value);
         }
         catch (Exception e)
         {
-
+        
         }
     }
 
-    static async Task TestCipherItemAsync(SharpWarden.WebClient.WebClient webClient)
+    static async Task TestCipherItemAsync()
     {
-        webClient.LinkDatabaseSession(BitwardenDatabaseSession);
+        var item = await VaultWebClient.GetCipherItemAsync(Guid.Parse("cb3bb34b-6491-4ded-b256-3cc9f76c975f"));
 
-        var item = await webClient.GetCipherItemAsync(Guid.Parse("c6a7e420-268b-465f-8f87-f8a16969da89"));
-        item.SetDatabaseSession(BitwardenDatabaseSession, item.OrganizationId);
+        var attachment = item.Attachments[0];
+        var attachmentStream = await VaultWebClient.GetAttachmentAsync(attachment);
+        
+        var clearStream = new MemoryStream();
 
-        var attachment = await webClient.GetAttachmentAsync(item.Attachments[4]);
+        await VaultService.DecryptAttachmentAsync(attachmentStream, attachment.Key.ClearBytes, clearStream);
+        clearStream.Position = 0; 
+        
+        using var fileStream = new FileStream("new_file", FileMode.Open, FileAccess.Read);
+        
+        var attachmentKey = RandomNumberGenerator.GetBytes(64);
+        
+        var encryptedName = UserCryptoService.NewEncryptedString();
+        encryptedName.ClearString = "test.txt";
+        
+        var encryptedKey = UserCryptoService.NewEncryptedString();
+        encryptedKey.ClearBytes = attachmentKey;
 
-        //var item = new CipherItemModel(BitwardenDatabaseSession);
+        var cryptedAttachmentStream = new MemoryStream();
 
-        //var login = item.CreateLogin();
-        //item.Name = new(BitwardenDatabaseSession);
-        //item.Name.ClearString = "TestEntry";
+        await VaultService.EncryptAttachmentAsync(fileStream, encryptedKey.ClearBytes, cryptedAttachmentStream);
+        cryptedAttachmentStream.Position = 0;
 
-        //login.Username = new(BitwardenDatabaseSession);
-        //login.Username.ClearString = "TestUser";
+        await VaultWebClient.CreateCipherItemAttachmentAsync(item.Id.Value, encryptedName.CipherString, encryptedKey.CipherString, cryptedAttachmentStream);
+    }
 
-        //await webClient.CreateCipherItemAsync(item);
+    static async Task LoadOnlineDatabaseAsync(string email, string password, string refreshToken)
+    {
+        await VaultWebClient.PreloginAsync(email);
+
+        // Authenticating with credentials triggers a mail notification.
+        // TODO: API key authentication
+        await VaultWebClient.AuthenticateAsync(password);
+        //await VaultWebClient.AuthenticateWithRefreshTokenAsync(refreshToken);
+
+        VaultService.LoadBitWardenDatabase(
+            Encoding.UTF8.GetBytes(password),
+            VaultWebClient.UserKdfIterations,
+            await VaultWebClient.GetDatabaseAsync());
+    }
+
+    static async Task LoadLocalDatabaseAsync(string email)
+    {
+        using (var stream = new FileStream("example_bitwarden.db", FileMode.Open, FileAccess.Read))
+        {
+            VaultService.LoadBitWardenDatabase(
+                Encoding.UTF8.GetBytes(email),
+                600000,
+                stream);
+        }
     }
 
     static async Task MainAsync()
     {
         const string bitWardenHost = "https://bitwarden.com";
 
-        var credentials = default(string[]);
-
-        // Example file format: mail|password|refreshToken
-        using (var fileStream = new FileStream("logins", FileMode.Open))
+        using (BitWardenDatabaseSessionScope = BitWardenHelper.CreateSessionScope(bitWardenHost))
         {
-            credentials = (await new StreamReader(fileStream).ReadToEndAsync()).Trim().Split("|", 3);
+            VaultWebClient = BitWardenDatabaseSessionScope.ServiceProvider.GetRequiredService<SharpWarden.WebClient.WebClient>();
+            VaultService = BitWardenDatabaseSessionScope.ServiceProvider.GetRequiredService<IVaultService>();
+            UserCryptoService = BitWardenDatabaseSessionScope.ServiceProvider.GetRequiredService<IUserCryptoService>();
+
+            await LoadOnlineDatabaseAsync(Environment.GetEnvironmentVariable("SharpWardenMail"), Environment.GetEnvironmentVariable("SharpWardenPassword"), null);
+            //await LoadLocalDatabaseAsync(credentials[1]);
+
+            await TestFolderAsync();
+            await TestCipherItemAsync();
+
+            PrintCipherItems();
         }
-
-        var vaultwardenWebClient = new SharpWarden.WebClient.WebClient(bitWardenHost);
-
-        await vaultwardenWebClient.PreloginAsync(credentials[0]);
-
-        // Authenticating with credentials triggers a mail notification.
-        // TODO: API key authentication
-        //await vaultwardenWebClient.AuthenticateAsync(credentials[1]);
-        await vaultwardenWebClient.AuthenticateWithRefreshTokenAsync(credentials[2]);
-
-        //Console.WriteLine($"Refresh token: {vaultwardenWebClient.GetWebSession().RefreshToken}");
-
-        BitwardenDatabaseSession = new();
-        //await BitwardenDatabaseSession.LoadBitWardenKeysAsync(
-        //    Encoding.UTF8.GetBytes(credentials[0]),
-        //    Encoding.UTF8.GetBytes(credentials[1]),
-        //    vaultwardenWebClient.UserKdfIterations,
-        //    vaultwardenWebClient.UserKey,
-        //    vaultwardenWebClient.UserPrivateKey
-        //);
-
-        await BitwardenDatabaseSession.LoadBitWardenDatabaseAsync(
-            Encoding.UTF8.GetBytes(credentials[1]),
-            vaultwardenWebClient.UserKdfIterations,
-            await vaultwardenWebClient.GetDatabaseAsync());
-
-        //using (var stream = new FileStream("example_bitwarden.db", FileMode.Open, FileAccess.Read))
-        //{
-        //    await BitwardenDatabaseSession.LoadBitWardenDatabaseAsync(
-        //        Encoding.UTF8.GetBytes(credentials[1]),
-        //        600000,
-        //        stream);
-        //}
-
-        await TestFolderAsync(vaultwardenWebClient);
-        await TestCipherItemAsync(vaultwardenWebClient);
-
-        //var cipherItems = BitwardenDatabaseSession.Database.Items;
-        //var cipherItems = await vaultwardenWebClient.GetCipherItemsAsync();
-
-        //var collections = BitwardenDatabaseSession.Database.Collections;
-
-        //PrintCipherItems(cipherItems);
     }
 }

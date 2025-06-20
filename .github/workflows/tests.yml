@@ -1,0 +1,40 @@
+name: Test .NET Library
+
+on:
+  push:
+    branches:
+      - main
+      - sensitive/*
+  pull_request:
+    branches:
+      - main
+      - sensitive/*
+
+jobs:
+  test:
+    name: Run unit tests
+    runs-on: ubuntu-latest
+
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+
+    env:
+      SHARP_WARDEN_TEST_ACCOUNT_NAME: ${{ secrets.SHARP_WARDEN_TEST_ACCOUNT_NAME }}
+      SHARP_WARDEN_TEST_ACCOUNT_PASSWORD: ${{ secrets.SHARP_WARDEN_TEST_ACCOUNT_PASSWORD }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run Tests
+        run: dotnet test Tests/Tests.csproj --verbosity normal

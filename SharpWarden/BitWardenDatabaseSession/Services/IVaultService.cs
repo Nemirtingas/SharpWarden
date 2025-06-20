@@ -1,0 +1,35 @@
+using SharpWarden.BitWardenDatabaseSession.Models;
+
+namespace SharpWarden.BitWardenDatabaseSession.Services;
+
+public interface IVaultService
+{
+    /// <summary>
+    /// This will load a database, presumably downloaded via the <see cref="WebClient.WebClient.GetDatabaseAsync"/>.
+    /// </summary>
+    /// <param name="userPassword"></param>
+    /// <param name="kdfIterations"></param>
+    /// <param name="stream">The stream must be Json convertible to <see cref="DatabaseModel"/></param>
+    void LoadBitWardenDatabase(byte[] userPassword, int kdfIterations, Stream stream);
+    /// <summary>
+    /// This will load a database, presumably downloaded via the <see cref="WebClient.WebClient.GetDatabaseAsync"/>.
+    /// </summary>
+    /// <param name="userPassword"></param>
+    /// <param name="kdfIterations"></param>
+    /// <param name="database"></param>
+    void LoadBitWardenDatabase(byte[] userPassword, int kdfIterations, DatabaseModel database);
+    /// <summary>
+    /// Call this after loading the database: <see cref="LoadBitWardenDatabase"/> .
+    /// </summary>
+    /// <returns></returns>
+    DatabaseModel GetBitWardenDatabase();
+    /// <summary>
+    /// Decrypt an already downloaded attachment. <see cref="WebClient.WebClient.GetAttachmentAsync"/>
+    /// </summary>
+    /// <param name="cryptedAttachment"></param>
+    /// <param name="key"></param>
+    /// <param name="output"></param>
+    /// <returns></returns>
+    Task DecryptAttachmentAsync(Stream cryptedAttachment, byte[] key, Stream output);
+    Task EncryptAttachmentAsync(Stream clearAttachment, byte[] key, Stream output);
+}

@@ -1,41 +1,14 @@
 using Newtonsoft.Json;
 using SharpWarden.BitWardenDatabaseSession;
-using SharpWarden.BitWardenDatabaseSession.Models;
+using SharpWarden.BitWardenDatabaseSession.Services;
 using static SharpWarden.BitWardenCipherService;
 
 namespace SharpWarden;
 
-public class EncryptedStringConverter : JsonConverter<EncryptedString>
-{
-    public override EncryptedString ReadJson(JsonReader reader, Type objectType, EncryptedString existingValue, bool hasExistingValue, JsonSerializer serializer)
-    {
-        if (reader.TokenType == JsonToken.String)
-        {
-            return new EncryptedString
-            {
-                CipherString = (string)reader.Value
-            };
-        }
-
-        if (reader.TokenType == JsonToken.None || reader.TokenType == JsonToken.Null || reader.TokenType == JsonToken.Undefined)
-            return null;
-
-        throw new JsonSerializationException($"Unexpected token type {reader.TokenType} when parsing EncryptedString.");
-    }
-
-    public override void WriteJson(JsonWriter writer, EncryptedString value, JsonSerializer serializer)
-    {
-        writer.WriteValue(value?.CipherString);
-    }
-}
-
-public class EncryptedString : IDatabaseSessionModel
+public class EncryptedString : ISessionAware
 {
     [JsonIgnore]
-    private DatabaseSession _DatabaseSession { get; set; }
-
-    [JsonIgnore]
-    private Guid? _OrganizationId { get; set; }
+    private IUserCryptoService _CryptoService { get; set; }
 
     public string CipherString { get; set; }
 
@@ -43,30 +16,23 @@ public class EncryptedString : IDatabaseSessionModel
     {
     }
 
-    public EncryptedString(DatabaseSession databaseSession)
+    public EncryptedString(IUserCryptoService cryptoService)
     {
-        _DatabaseSession = databaseSession;
+        _CryptoService = cryptoService;
     }
 
-    public bool HasSession() => _DatabaseSession != null;
+    public bool HasSession() => _CryptoService != null;
 
-    public void SetDatabaseSession(DatabaseSession databaseSession)
+    public void SetCryptoService(IUserCryptoService cryptoService)
     {
-        _DatabaseSession = databaseSession;
-    }
-
-    public void SetDatabaseSession(DatabaseSession databaseSession, Guid? organizationId)
-    {
-        _DatabaseSession = databaseSession;
-        _OrganizationId = organizationId;
+        _CryptoService = cryptoService;
     }
 
     public EncryptedString Clone()
     {
         return new EncryptedString
         {
-            _DatabaseSession = _DatabaseSession,
-            _OrganizationId = _OrganizationId,
+            _CryptoService = _CryptoService,
             CipherString = CipherString,
         };
     }
@@ -79,28 +45,22 @@ public class EncryptedString : IDatabaseSessionModel
             if (CipherString == null)
                 return null;
 
-            if (_DatabaseSession == null)
+            if (_CryptoService == null)
                     throw new InvalidOperationException("The database session is not loaded.");
 
-            if (CipherType == BitWardenCipherType.AesCbc256_HmacSha256_B64)
-                return _DatabaseSession.GetClearStringWithMasterKey(_OrganizationId, CipherString);
-
-            if (CipherType == BitWardenCipherType.Rsa2048_OaepSha1_B64)
-                return _DatabaseSession.GetClearStringWithMasterKeyWithRSAKey(_OrganizationId, CipherString);
-
-            throw new NotImplementedException();
+            return _CryptoService.GetClearStringAuto(CipherString);
         }
 
         set
         {
-            if (_DatabaseSession == null)
+            if (_CryptoService == null)
                 throw new InvalidOperationException("The database session is not loaded.");
 
             switch (CipherType)
             {
                 case BitWardenCipherType.Unknown: // Common case of an unknown type would be to crypt with the master key.
-                case BitWardenCipherType.AesCbc256_HmacSha256_B64: CipherString = _DatabaseSession.CryptClearStringWithMasterKey(_OrganizationId, value); return;
-                case BitWardenCipherType.Rsa2048_OaepSha1_B64: CipherString = _DatabaseSession.CryptClearStringWithRSAKey(_OrganizationId, value); return;
+                case BitWardenCipherType.AesCbc256_HmacSha256_B64: CipherString = _CryptoService.CryptClearStringWithMasterKey(value); return;
+                case BitWardenCipherType.Rsa2048_OaepSha1_B64: CipherString = _CryptoService.CryptClearStringWithRSAKey(value); return;
             }
 
             throw new NotImplementedException();
@@ -115,28 +75,28 @@ public class EncryptedString : IDatabaseSessionModel
             if (CipherString == null)
                 return null;
 
-            if (_DatabaseSession == null)
+            if (_CryptoService == null)
                 throw new InvalidOperationException("The database session is not loaded.");
 
             if (CipherType == BitWardenCipherType.AesCbc256_HmacSha256_B64)
-                return _DatabaseSession.GetClearBytesWithMasterKey(_OrganizationId, CipherString);
+                return _CryptoService.GetClearBytesWithMasterKey(CipherString);
 
             if (CipherType == BitWardenCipherType.Rsa2048_OaepSha1_B64)
-                return _DatabaseSession.GetClearBytesWithRSAKey(_OrganizationId, CipherString);
+                return _CryptoService.GetClearBytesWithRSAKey(CipherString);
 
             throw new NotImplementedException();
         }
 
         set
         {
-            if (_DatabaseSession == null)
+            if (_CryptoService == null)
                 throw new InvalidOperationException("The database session is not loaded.");
 
             switch (CipherType)
             {
                 case BitWardenCipherType.Unknown: // Common case of an unknown type would be to crypt with the master key.
-                case BitWardenCipherType.AesCbc256_HmacSha256_B64: CipherString = _DatabaseSession.CryptClearBytesWithMasterKey(_OrganizationId, value); return;
-                case BitWardenCipherType.Rsa2048_OaepSha1_B64: CipherString = _DatabaseSession.CryptClearBytesWithRSAKey(_OrganizationId, value); return;
+                case BitWardenCipherType.AesCbc256_HmacSha256_B64: CipherString = _CryptoService.CryptClearBytesWithMasterKey(value); return;
+                case BitWardenCipherType.Rsa2048_OaepSha1_B64: CipherString = _CryptoService.CryptClearBytesWithRSAKey(value); return;
             }
 
             throw new NotImplementedException();
@@ -167,8 +127,8 @@ public class EncryptedString : IDatabaseSessionModel
             {
                 switch (value)
                 {
-                    case BitWardenCipherType.AesCbc256_HmacSha256_B64: CipherString = _DatabaseSession.CryptClearStringWithMasterKey(null, ""); break;
-                    case BitWardenCipherType.Rsa2048_OaepSha1_B64: CipherString = _DatabaseSession.CryptClearStringWithRSAKey(null, ""); break;
+                    case BitWardenCipherType.AesCbc256_HmacSha256_B64: CipherString = _CryptoService.CryptClearStringWithMasterKey(""); break;
+                    case BitWardenCipherType.Rsa2048_OaepSha1_B64: CipherString = _CryptoService.CryptClearStringWithRSAKey(""); break;
                 }
                 return;
             }
