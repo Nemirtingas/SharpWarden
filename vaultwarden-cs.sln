@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpWarden", "SharpWarden\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Examples", "Examples\Examples.csproj", "{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{91E60CE7-EAE1-4254-891C-A6F689D22403}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,6 +22,10 @@ Global
 		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4231C2B0-5AEB-2EC9-2588-94FF03EC9E9D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{91E60CE7-EAE1-4254-891C-A6F689D22403}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{91E60CE7-EAE1-4254-891C-A6F689D22403}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{91E60CE7-EAE1-4254-891C-A6F689D22403}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{91E60CE7-EAE1-4254-891C-A6F689D22403}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

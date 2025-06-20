@@ -22,4 +22,6 @@ public enum ObjectType
     Folder,
     [EnumMember(Value = "list")]
     List,
+    [EnumMember(Value = "attachment-fileUpload")]
+    AttachmentFileUpload,
 }

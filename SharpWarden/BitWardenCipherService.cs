@@ -9,6 +9,45 @@ namespace SharpWarden;
 
 public static class BitWardenCipherService
 {
+    public class HmacAppendingStream : Stream
+    {
+        private readonly Stream _inner;
+        private readonly HMAC _hmac;
+
+        public HmacAppendingStream(Stream inner, HMAC hmac)
+        {
+            _inner = inner;
+            _hmac = hmac;
+        }
+
+        public override bool CanRead => false;
+        public override bool CanSeek => false;
+        public override bool CanWrite => true;
+        public override long Length => _inner.Length;
+        public override long Position { get => _inner.Position; set => throw new NotSupportedException(); }
+
+        public override void Flush() => _inner.Flush();
+
+        public override Task FlushAsync(CancellationToken cancellationToken) => _inner.FlushAsync(cancellationToken);
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            _hmac.TransformBlock(buffer, offset, count, null, 0);
+            _inner.Write(buffer, offset, count);
+        }
+
+        public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            _hmac.TransformBlock(buffer, offset, count, null, 0);
+            await _inner.WriteAsync(buffer.AsMemory(offset, count), cancellationToken);
+        }
+
+        // Not supported
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => _inner.SetLength(value);
+    }
+
     public enum BitWardenCipherType
     {
         Unknown = -1,
@@ -73,7 +112,7 @@ public static class BitWardenCipherService
         return okm;
     }
 
-    public static async Task DecryptWithAesCbc256HmacSha256Base64ByteStream(Stream attachment, Stream decryptedAttachment, byte[] attachmentKey)
+    public static async Task DecryptWithAesCbc256HmacSha256Base64ByteStreamAsync(Stream attachment, Stream decryptedAttachment, byte[] attachmentKey)
     {
         var keyEnc = attachmentKey[..32];
         var keyMac = attachmentKey[32..];
@@ -93,36 +132,8 @@ public static class BitWardenCipherService
         var macExpected = new byte[32];
         attachment.ReadExactly(macExpected);
 
-        using var ciphertextStream = new MemoryStream();
-
-        using (var hmac = new HMACSHA256(keyMac))
-        {
-            hmac.TransformBlock(iv, 0, iv.Length, null, 0);
-
-            const int bufferSize = 8192;
-            byte[] buffer = new byte[bufferSize];
-            long remaining = ciphertextLength;
-
-            while (remaining > 0)
-            {
-                int toRead = (int)Math.Min(bufferSize, remaining);
-                int read = await attachment.ReadAsync(buffer.AsMemory(0, toRead));
-                if (read == 0)
-                    throw new EndOfStreamException();
-
-                hmac.TransformBlock(buffer, 0, read, null, 0);
-                ciphertextStream.Write(buffer, 0, read);
-                remaining -= read;
-            }
-
-            hmac.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
-            var computedMac = hmac.Hash;
-
-            if (macExpected.Length != computedMac.Length || !macExpected.SequenceEqual(computedMac))
-                throw new CryptographicException("MAC mismatch - invalid password or data.");
-        }
-
-        ciphertextStream.Seek(0, SeekOrigin.Begin);
+        using var hmac = new HMACSHA256(keyMac);
+        hmac.TransformBlock(iv, 0, iv.Length, null, 0); // MAC = HMAC(iv + ciphertext)
 
         using var aes = Aes.Create();
         aes.Key = keyEnc;
@@ -131,8 +142,65 @@ public static class BitWardenCipherService
         aes.Padding = PaddingMode.PKCS7;
 
         using var decryptor = aes.CreateDecryptor();
-        using var cryptoStream = new CryptoStream(ciphertextStream, decryptor, CryptoStreamMode.Read);
-        await cryptoStream.CopyToAsync(decryptedAttachment);
+        using var cryptoStream = new CryptoStream(decryptedAttachment, decryptor, CryptoStreamMode.Write, leaveOpen: true);
+
+        const int bufferSize = 8192;
+        byte[] buffer = new byte[bufferSize];
+        int bytesRead;
+
+        while ((bytesRead = await attachment.ReadAsync(buffer, 0, buffer.Length)) > 0)
+        {
+            hmac.TransformBlock(buffer, 0, bytesRead, null, 0);
+            await cryptoStream.WriteAsync(buffer, 0, bytesRead);
+        }
+
+        hmac.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+
+        if (!hmac.Hash.SequenceEqual(macExpected))
+            throw new CryptographicException("MAC mismatch – fichier corrompu ou clé invalide.");
+
+        await cryptoStream.FlushAsync();
+    }
+
+    public static async Task EncryptWithAesCbc256HmacSha256Base64ByteStreamAsync(Stream input, Stream output, byte[] attachmentKey)
+    {
+        var keyEnc = attachmentKey[..32];
+        var keyMac = attachmentKey[32..];
+
+        byte[] iv = RandomNumberGenerator.GetBytes(16);
+
+        output.WriteByte((byte)BitWardenCipherType.AesCbc256_HmacSha256_B64);
+
+        await output.WriteAsync(iv, 0, iv.Length);
+
+        long macPosition = output.Position;
+        await output.WriteAsync(new byte[32]); // Placeholder
+
+        using var hmac = new HMACSHA256(keyMac);
+        hmac.TransformBlock(iv, 0, iv.Length, null, 0);
+
+        using var aes = Aes.Create();
+        aes.Key = keyEnc;
+        aes.IV = iv;
+        aes.Mode = CipherMode.CBC;
+        aes.Padding = PaddingMode.PKCS7;
+
+        using var encryptor = aes.CreateEncryptor();
+        using (var cryptoStream = new CryptoStream(new HmacAppendingStream(output, hmac), encryptor, CryptoStreamMode.Write, leaveOpen: true))
+        {
+            const int bufferSize = 8192;
+            byte[] buffer = new byte[bufferSize];
+            int bytesRead;
+            while ((bytesRead = await input.ReadAsync(buffer, 0, buffer.Length)) > 0)
+            {
+                await cryptoStream.WriteAsync(buffer, 0, bytesRead);
+            }
+        }
+
+        hmac.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+
+        output.Position = macPosition;
+        await output.WriteAsync(hmac.Hash, 0, 32);
     }
 
     public static byte[] DecryptWithAesCbc256HmacSha256Base64(string cipherString, byte[] stretchedEncKey, byte[] stretchedMacKey)

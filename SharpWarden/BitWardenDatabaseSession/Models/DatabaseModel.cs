@@ -1,58 +1,43 @@
 using Newtonsoft.Json;
-using SharpWarden.BitWardenDatabaseSession.CipherItem.Models;
-using SharpWarden.BitWardenDatabaseSession.CollectionItem.Models;
-using SharpWarden.BitWardenDatabaseSession.FolderItem.Models;
-using SharpWarden.BitWardenDatabaseSession.ProfileItem.Models;
+using SharpWarden.BitWardenDatabaseSession.Services;
+using SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
+using SharpWarden.BitWardenDatabaseSession.Models.CollectionItem;
+using SharpWarden.BitWardenDatabaseSession.Models.FolderItem;
+using SharpWarden.BitWardenDatabaseSession.Models.ProfileItem;
 
 namespace SharpWarden.BitWardenDatabaseSession.Models;
 
-public class DatabaseModel : IDatabaseSessionModel
+public class DatabaseModel : ISessionAware
 {
-    private DatabaseSession _DatabaseSession;
+    private IUserCryptoService _CryptoService;
 
-    public DatabaseModel(DatabaseSession databaseSession)
+    public DatabaseModel(IUserCryptoService cryptoService)
     {
-        _DatabaseSession = databaseSession;
+        _CryptoService = cryptoService;
         Items = new();
         Folders = new();
         Collections = new();
-        Profile = new(databaseSession);
+        Profile = new(cryptoService);
     }
 
-    public bool HasSession() => _DatabaseSession != null;
+    public bool HasSession() => _CryptoService != null;
 
-    public void SetDatabaseSession(DatabaseSession databaseSession)
+    public void SetCryptoService(IUserCryptoService cryptoService)
     {
-        _DatabaseSession = databaseSession;
+        _CryptoService = cryptoService;
 
         foreach (var item in Items)
-            item.SetDatabaseSession(_DatabaseSession);
+            item.SetCryptoService(_CryptoService);
 
         foreach (var item in Folders)
-            item.SetDatabaseSession(_DatabaseSession);
+            item.SetCryptoService(_CryptoService);
 
         foreach (var item in Collections)
-            item.SetDatabaseSession(_DatabaseSession);
+            item.SetCryptoService(_CryptoService);
 
-        Profile?.SetDatabaseSession(_DatabaseSession);
+        Profile?.SetCryptoService(_CryptoService);
     }
-
-    public void SetDatabaseSession(DatabaseSession databaseSession, Guid? organizationId)
-    {
-        _DatabaseSession = databaseSession;
-
-        foreach (var item in Items)
-            item.SetDatabaseSession(_DatabaseSession, organizationId);
-
-        foreach (var item in Folders)
-            item.SetDatabaseSession(_DatabaseSession, organizationId);
-
-        foreach (var item in Collections)
-            item.SetDatabaseSession(_DatabaseSession, organizationId);
-
-        Profile?.SetDatabaseSession(_DatabaseSession, organizationId);
-    }
-
+    
     [JsonProperty("ciphers")]
     public List<CipherItemModel> Items { get; set; }
 
