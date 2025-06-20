@@ -2,14 +2,12 @@ using System.Net.Http.Headers;
 using System.Text;
 using SharpWarden.BitWardenWebSession.Models;
 using SharpWarden.WebClient.Models;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SharpWarden.BitWardenDatabaseSession.Models;
 using SharpWarden.BitWardenDatabaseSession.Models.FolderItem;
 using SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
 using SharpWarden.BitWardenDatabaseSession.Models.ProfileItem;
 using SharpWarden.BitWardenDatabaseSession;
-using SharpWarden.BitWardenDatabaseSession.Converter;
 using SharpWarden.BitWardenDatabaseSession.Services;
 
 namespace SharpWarden.WebClient;
@@ -22,6 +20,10 @@ public class WebClient
     private string _Username;
     private readonly ISessionJsonConverterService _JsonSerializer;
 
+    public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
+    public const string SSHKeyCipherMinimumVersion = "2024.12.0";
+    public const string DenyLegacyUserMinimumVersion = "2025.6.0";
+
     public WebClient(
         ISessionJsonConverterService jsonSerializer,
         string baseUrl)
@@ -29,7 +31,10 @@ public class WebClient
         _JsonSerializer = jsonSerializer;
         _Guid = Guid.NewGuid();
         _WebSession = new LoginModel();
-        _HttpClient = new HttpClient { BaseAddress = new Uri(baseUrl) };
+        _HttpClient = new HttpClient(new HttpClientHandler { AutomaticDecompression = System.Net.DecompressionMethods.Deflate })
+        {
+            BaseAddress = new Uri(baseUrl)
+        };
     }
 
     private T _Deserialize<T>(Stream stream)
@@ -59,7 +64,15 @@ public class WebClient
         _Username = username;
     }
 
-    public async Task AuthenticateAsync(string password)
+    /// <summary>
+    /// If <paramref name="deviceVersion"/> is not at least <see cref="SSHKeyCipherMinimumVersion"/>, ssh keys will not be returned by <see cref="GetDatabaseAsync"/>.
+    /// </summary>
+    /// <param name="password"></param>
+    /// <param name="deviceVersion"></param>
+    /// <param name="deviceType"></param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    public async Task AuthenticateAsync(string password, string deviceVersion = DenyLegacyUserMinimumVersion,  DeviceType deviceType = DeviceType.Sdk)
     {
         if (string.IsNullOrWhiteSpace(_Username) || !(_WebSession?.KdfIterations > 0))
             throw new InvalidOperationException("Prelogin must be called prior to " + nameof(AuthenticateAsync) + " .");
@@ -71,7 +84,7 @@ public class WebClient
         var parameters = new Dictionary<string, string>{
             { "scope"           , "api offline_access" },
             { "client_id"       , "web" },
-            { "deviceType"      , $"{(int)DeviceType.Sdk}" },
+            { "deviceType"      , $"{(int)deviceType}" },
             { "deviceIdentifier", _Guid.ToString() },
             { "deviceName"      , "SharpWarden" },
             { "grant_type"      , "password" },
@@ -87,6 +100,8 @@ public class WebClient
         _WebSession = _Deserialize<LoginModel>(await response.Content.ReadAsStreamAsync());
 
         _HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _WebSession.AccessToken);
+        _HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("Bitwarden-Client-Name", "web");
+        _HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("Bitwarden-Client-Version", deviceVersion);
     }
 
     public async Task AuthenticateWithRefreshTokenAsync(string refreshToken)
@@ -450,8 +465,9 @@ public class WebClient
         return await _GetAPIAsync<ProfileItemModel>("/api/accounts/profile");
     }
 
-    public async Task<DatabaseModel> GetDatabaseAsync()
+    public async Task<DatabaseModel> GetDatabaseAsync(bool excludeDomains = true)
     {
-        return await _GetAPIAsync<DatabaseModel>("/api/sync?excludeDomains=true");
+        var strBool = excludeDomains ? "true" : "false"; // Because bool.ToString() is CamelCase
+        return await _GetAPIAsync<DatabaseModel>($"/api/sync?excludeDomains={strBool}");
     }
 }

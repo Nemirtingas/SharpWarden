@@ -74,6 +74,13 @@ public class CipherItemModel : ISessionAware
         return Card;
     }
 
+    public SSHKeyFieldModel CreateSSHKey()
+    {
+        ItemType = CipherItemType.SSHKey;
+        SSHKey = new SSHKeyFieldModel(_ConditionalCryptoService);
+        return SSHKey;
+    }
+
     [JsonProperty("attachments")]
     public List<AttachmentModel> Attachments { get; set; }
 
@@ -145,7 +152,7 @@ public class CipherItemModel : ISessionAware
     public SecureNoteFieldModel SecureNote { get; set; }
 
     [JsonProperty("sshKey")]
-    public EncryptedString SSHKey { get; set; }
+    public SSHKeyFieldModel SSHKey { get; set; }
 
     [JsonProperty("type")]
     public CipherItemType ItemType { get; set; }

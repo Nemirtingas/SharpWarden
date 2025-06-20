@@ -12,6 +12,8 @@ public enum ObjectType
     Attachment,
     [EnumMember(Value = "cipherDetails")]
     CipherDetails,
+    [EnumMember(Value = "cipher")]
+    Cipher,
     [EnumMember(Value = "collectionDetails")]
     CollectionDetails,
     [EnumMember(Value = "policy")]

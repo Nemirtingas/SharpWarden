@@ -15,6 +15,7 @@ namespace Tests
         const string TestItemCardId = "1db665ae-2e24-426c-83d8-b302014703a5";
         const string TestItemIdentityId = "e5f3057c-1728-41a6-96dd-b302014a783c";
         const string TestItemSecureNoteId = "be880b58-d562-4c4a-8abf-b302015348b6";
+        const string TestItemSSHKeyId = "5221df17-19e4-408b-b27f-b30201547789";
 
         private static IServiceScope DatabaseSessionScope;
         private static SharpWarden.WebClient.WebClient VaultWebClient;
@@ -101,6 +102,7 @@ namespace Tests
 
             Assert.IsNotNull(item);
             Assert.AreEqual(item.Id.ToString(), TestItemLoginId);
+            Assert.AreEqual(item.ItemType, CipherItemType.Login);
             Assert.AreEqual(item.Notes.ClearString, "LoginNotes");
 
             Assert.AreEqual(item.Login.Username.ClearString, "LoginUsername");
@@ -135,6 +137,7 @@ namespace Tests
 
             Assert.IsNotNull(item);
             Assert.AreEqual(item.Id.ToString(), TestItemCardId);
+            Assert.AreEqual(item.ItemType, CipherItemType.Card);
             Assert.AreEqual(item.Notes.ClearString, "CardNotes");
 
             Assert.AreEqual(item.Card.CardholderName.ClearString, "CardholderName");
@@ -152,6 +155,7 @@ namespace Tests
 
             Assert.IsNotNull(item);
             Assert.AreEqual(item.Id.ToString(), TestItemIdentityId);
+            Assert.AreEqual(item.ItemType, CipherItemType.Identity);
             Assert.AreEqual(item.Notes.ClearString, "IdentityNotes");
 
             Assert.AreEqual(item.Identity.Address1.ClearString, "IdentityAddress1");
@@ -180,9 +184,25 @@ namespace Tests
 
             Assert.IsNotNull(item);
             Assert.AreEqual(item.Id.ToString(), TestItemSecureNoteId);
+            Assert.AreEqual(item.ItemType, CipherItemType.SecureNote);
             Assert.AreEqual(item.Notes.ClearString, "SecureNoteNotes");
 
             Assert.AreEqual(item.SecureNote.Type, SecureNoteType.Generic);
+        }
+
+        [TestMethod]
+        public async Task _0010_TestItemSSHKeyAsync()
+        {
+            var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestItemSSHKeyId));
+
+            Assert.IsNotNull(item);
+            Assert.AreEqual(item.Id.ToString(), TestItemSSHKeyId);
+            Assert.AreEqual(item.ItemType, CipherItemType.SSHKey);
+            Assert.AreEqual(item.Notes.ClearString, "SSHKeyNotes");
+
+            Assert.AreEqual(item.SSHKey.KeyFingerprint.ClearString, "SHA256:dbBC+ec5IlSfcufRZnalIk2q5ISTup3nff6mdjAccVI");
+            Assert.AreEqual(item.SSHKey.PublicKey.ClearString, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKoMZebfc4izVVC0pjt9KNAtpVQ15X1MgpdzjloRAP3N");
+            Assert.AreEqual(item.SSHKey.PrivateKey.ClearString, "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\nQyNTUxOQAAACCqDGXm33OIs1VQtKY7fSjQLaVUNeV9TIKXc45aEQD9zQAAAIhBcXK7QXFy\nuwAAAAtzc2gtZWQyNTUxOQAAACCqDGXm33OIs1VQtKY7fSjQLaVUNeV9TIKXc45aEQD9zQ\nAAAEAZBznOkm7Q61yxXzyWOmVw+OPn7eKOBpcf4cELcPnPnKoMZebfc4izVVC0pjt9KNAt\npVQ15X1MgpdzjloRAP3NAAAAAAECAwQF\n-----END OPENSSH PRIVATE KEY-----\n");
         }
     }
 }
