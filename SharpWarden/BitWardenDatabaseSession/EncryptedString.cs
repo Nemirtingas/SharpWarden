@@ -78,11 +78,11 @@ public class EncryptedString : ISessionAware
             if (_CryptoService == null)
                 throw new InvalidOperationException("The database session is not loaded.");
 
-            if (CipherType == BitWardenCipherType.AesCbc256_HmacSha256_B64)
-                return _CryptoService.GetClearBytesWithMasterKey(CipherString);
-
-            if (CipherType == BitWardenCipherType.Rsa2048_OaepSha1_B64)
-                return _CryptoService.GetClearBytesWithRSAKey(CipherString);
+            switch(CipherType)
+            {
+                case BitWardenCipherType.AesCbc256_HmacSha256_B64: return _CryptoService.GetClearBytesWithMasterKey(CipherString);
+                case BitWardenCipherType.Rsa2048_OaepSha1_B64: return _CryptoService.GetClearBytesWithRSAKey(CipherString);
+            }
 
             throw new NotImplementedException();
         }
@@ -120,10 +120,12 @@ public class EncryptedString : ISessionAware
 
         set
         {
-            if (CipherType == value)
+            var cipherType = CipherType;
+
+            if (cipherType == value)
                 return;
 
-            if (CipherType == BitWardenCipherType.Unknown)
+            if (cipherType == BitWardenCipherType.Unknown)
             {
                 switch (value)
                 {
@@ -182,19 +184,22 @@ public class EncryptedString : ISessionAware
     {
         get
         {
-            if (CipherType == BitWardenCipherType.AesCbc256_HmacSha256_B64)
+            switch (CipherType)
             {
-                var parts = CipherString.Split('.', 2);
-                var innerParts = parts[1].Split('|');
-                return Convert.FromBase64String(innerParts[1]);
-            }
+                case BitWardenCipherType.AesCbc256_HmacSha256_B64:
+                {
+                    var parts = CipherString.Split('.', 2);
+                    var innerParts = parts[1].Split('|');
+                    return Convert.FromBase64String(innerParts[1]);
+                }
 
-            if (CipherType == BitWardenCipherType.Rsa2048_OaepSha1_B64)
-            {
-                var parts = CipherString.Split('.', 2);
-                string[] innerParts = parts[1].Split('|');
-                return Convert.FromBase64String(innerParts[0]);
-            }
+                case BitWardenCipherType.Rsa2048_OaepSha1_B64:
+                {
+                    var parts = CipherString.Split('.', 2);
+                    var innerParts = parts[1].Split('|');
+                    return Convert.FromBase64String(innerParts[0]);
+                }
+        }
 
             return null;
         }

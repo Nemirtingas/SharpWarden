@@ -2,6 +2,8 @@ name: Test .NET Library
 
 on:
   push:
+    tags:
+      - 'v*'
     branches:
       - main
       - sensitive/*
