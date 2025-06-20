@@ -14,6 +14,7 @@ namespace Tests
         const string TestItemLoginId = "a65b2d2d-cd0a-4640-a778-b302014444c9";
         const string TestItemCardId = "1db665ae-2e24-426c-83d8-b302014703a5";
         const string TestItemIdentityId = "e5f3057c-1728-41a6-96dd-b302014a783c";
+        const string TestItemSecureNoteId = "be880b58-d562-4c4a-8abf-b302015348b6";
 
         private static IServiceScope DatabaseSessionScope;
         private static SharpWarden.WebClient.WebClient VaultWebClient;
@@ -145,7 +146,7 @@ namespace Tests
         }
 
         [TestMethod]
-        public async Task _0008_TestItemCardAsync()
+        public async Task _0008_TestItemIdentityAsync()
         {
             var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestItemIdentityId));
 
@@ -170,6 +171,18 @@ namespace Tests
             Assert.AreEqual(item.Identity.LicenseNumber.ClearString, "IdentityLicenseNumber");
             Assert.AreEqual(item.Identity.Email.ClearString, "IdentityMail");
             Assert.AreEqual(item.Identity.Phone.ClearString, "IdentityPhone");
+        }
+
+        [TestMethod]
+        public async Task _0009_TestItemSecureNoteAsync()
+        {
+            var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestItemSecureNoteId));
+
+            Assert.IsNotNull(item);
+            Assert.AreEqual(item.Id.ToString(), TestItemSecureNoteId);
+            Assert.AreEqual(item.Notes.ClearString, "SecureNoteNotes");
+
+            Assert.AreEqual(item.SecureNote.Type, SecureNoteType.Generic);
         }
     }
 }
