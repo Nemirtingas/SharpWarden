@@ -9,6 +9,7 @@ namespace Tests
     {
         const string SharpWardenTestItemId = "1de1488c-f980-446a-bb5a-b30201265744";
         const string SharpWardenTestFolderId = "01c15505-4683-48c2-a3fb-b302013ba7a0";
+        const string SharpWardenTestItemInFolderId = "348270df-0c8e-4e05-8997-b30201427190";
 
         private static IServiceScope DatabaseSessionScope;
         private static SharpWarden.WebClient.WebClient VaultWebClient;
@@ -73,6 +74,19 @@ namespace Tests
             Assert.IsNotNull(folder);
             Assert.AreEqual(folder.Id.ToString(), SharpWardenTestFolderId);
             Assert.AreEqual(folder.Name.ClearString, "SharpWardenTestFolder");
+        }
+
+        [TestMethod]
+        public async Task _0005_TestItemInFolderAsync()
+        {
+            var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(SharpWardenTestItemInFolderId));
+
+            Assert.IsNotNull(item);
+            Assert.AreEqual(item.Id.ToString(), SharpWardenTestItemInFolderId);
+            Assert.AreEqual(item.Name.ClearString, "SharpWardenTestItemInFolder");
+            Assert.AreEqual(item.Login.Username.ClearString, "FolderUser");
+            Assert.AreEqual(item.Login.Password.ClearString, "FolderPassword");
+            Assert.AreEqual(item.FolderId, Guid.Parse(SharpWardenTestFolderId));
         }
     }
 }
