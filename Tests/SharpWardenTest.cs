@@ -1,4 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using SharpWarden.BitWardenDatabaseSession.Services;
 using System.Text;
 
@@ -24,13 +24,16 @@ namespace Tests
             VaultWebClient = DatabaseSessionScope.ServiceProvider.GetRequiredService<SharpWarden.WebClient.WebClient>();
             VaultService = DatabaseSessionScope.ServiceProvider.GetRequiredService<IVaultService>();
             UserCryptoService = DatabaseSessionScope.ServiceProvider.GetRequiredService<IUserCryptoService>();
-            TestAccountEmail = Environment.GetEnvironmentVariable("SharpWardenTestAccountEmail");
-            TestAccountPassword = Environment.GetEnvironmentVariable("SharpWardenTestAccountPassword");
+            TestAccountEmail = Environment.GetEnvironmentVariable("SHARP_WARDEN_TEST_ACCOUNT_NAME");
+            TestAccountPassword = Environment.GetEnvironmentVariable("SHARP_WARDEN_TEST_ACCOUNT_PASSWORD");
         }
 
         [TestMethod]
         public async Task _0001_TestCredentialsLogin()
         {
+            Assert.IsFalse(string.IsNullOrWhiteSpace(TestAccountEmail));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(TestAccountPassword));
+
             await VaultWebClient.PreloginAsync(TestAccountEmail);
 
             // Authenticating with credentials triggers a mail notification.
@@ -68,7 +71,7 @@ namespace Tests
             var folder = VaultService.GetBitWardenDatabase().Folders.Find(e => e.Id == Guid.Parse(SharpWardenTestFolderId));
 
             Assert.IsNotNull(folder);
-            Assert.AreEqual(folder.Id.ToString(), SharpWardenTestItemId);
+            Assert.AreEqual(folder.Id.ToString(), SharpWardenTestFolderId);
             Assert.AreEqual(folder.Name.ClearString, "SharpWardenTestFolder");
         }
     }
