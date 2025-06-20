@@ -159,4 +159,7 @@ public class CipherItemModel : ISessionAware
 
     [JsonProperty("viewPassword")]
     public bool ViewPassword { get; set; }
+
+    [JsonProperty("permissions")]
+    public PermissionFieldModel Permissions { get; set; }
 }

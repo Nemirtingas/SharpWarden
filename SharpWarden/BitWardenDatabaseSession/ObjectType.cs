@@ -10,10 +10,21 @@ public enum ObjectType
     ProfileOrganization,
     [EnumMember(Value = "attachment")]
     Attachment,
-    [EnumMember(Value = "cipherDetails")]
-    CipherDetails,
+    /// <summary>
+    /// Has Login/Identity/Card/SecureNote/SSHKey, Id, Type, Name, Notes, Fields, PasswordHistory, RevisionDate, OrganizationId, Attachments, OrganizationUseTotp, CreationDate, DeletedDate, Reprompt, Key
+    /// </summary>
+    [EnumMember(Value = "cipherMini")]
+    CipherMini,
+    /// <summary>
+    /// Same as <see cref="CipherMini"/> but with FolderId, Favorite, Edit, ViewPassword, Permissions
+    /// </summary>
     [EnumMember(Value = "cipher")]
     Cipher,
+    /// <summary>
+    /// Same as <see cref="Cipher"/> but with CollectionsIds
+    /// </summary>
+    [EnumMember(Value = "cipherDetails")]
+    CipherDetails,
     [EnumMember(Value = "collectionDetails")]
     CollectionDetails,
     [EnumMember(Value = "policy")]
