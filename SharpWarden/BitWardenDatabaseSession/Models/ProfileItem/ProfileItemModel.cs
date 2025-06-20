@@ -82,7 +82,7 @@ public class ProfileItemModel : ISessionAware
     public List<object> Providers { get; set; }
 
     [JsonProperty("securityStamp")]
-    public Guid? SecurityStamp { get; set; }
+    public string SecurityStamp { get; set; }
 
     [JsonProperty("twoFactorEnabled")]
     public bool TwoFactorEnabled { get; set; }
