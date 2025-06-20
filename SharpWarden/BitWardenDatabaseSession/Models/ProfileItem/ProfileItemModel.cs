@@ -7,6 +7,11 @@ public class ProfileItemModel : ISessionAware
 {
     private IUserCryptoService _CryptoService;
 
+    public ProfileItemModel()
+    {
+        Organizations = new();
+    }
+
     public ProfileItemModel(IUserCryptoService cryptoService)
     {
         Organizations = new();

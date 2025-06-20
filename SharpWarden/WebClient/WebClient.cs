@@ -49,7 +49,7 @@ public class WebClient
     public string UserKey => _WebSession.Key;
     public string UserPrivateKey => _WebSession.PrivateKey;
 
-    public async Task<bool> PreloginAsync(string username)
+    public async Task PreloginAsync(string username)
     {
         var content = new StringContent(new JObject { { "email", username } }.ToString(), new UTF8Encoding(false), "application/json");
         var response = await _HttpClient.PostAsync("/identity/accounts/prelogin", content);
@@ -57,11 +57,9 @@ public class WebClient
 
         _WebSession.KdfIterations = _Deserialize<PreLoginModel>(await response.Content.ReadAsStreamAsync()).KdfIterations;
         _Username = username;
-
-        return true;
     }
 
-    public async Task<bool> AuthenticateAsync(string password)
+    public async Task AuthenticateAsync(string password)
     {
         if (string.IsNullOrWhiteSpace(_Username) || !(_WebSession?.KdfIterations > 0))
             throw new InvalidOperationException("Prelogin must be called prior to " + nameof(AuthenticateAsync) + " .");
@@ -89,11 +87,9 @@ public class WebClient
         _WebSession = _Deserialize<LoginModel>(await response.Content.ReadAsStreamAsync());
 
         _HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _WebSession.AccessToken);
-
-        return true;
     }
 
-    public async Task<bool> AuthenticateWithRefreshTokenAsync(string refreshToken)
+    public async Task AuthenticateWithRefreshTokenAsync(string refreshToken)
     {
         if (string.IsNullOrWhiteSpace(_Username) || !(_WebSession?.KdfIterations > 0))
             throw new InvalidOperationException("Prelogin must be called prior to " + nameof(AuthenticateWithRefreshTokenAsync) + " .");
@@ -117,8 +113,6 @@ public class WebClient
 
         _WebSession.Key = profile.Key.CipherString;
         _WebSession.PrivateKey = profile.PrivateKey.CipherString;
-
-        return true;
     }
 
     #region Common API

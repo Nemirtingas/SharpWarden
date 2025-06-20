@@ -13,6 +13,7 @@ namespace Tests
         const string SharpWardenTestItemInFolderId = "348270df-0c8e-4e05-8997-b30201427190";
         const string TestItemLoginId = "a65b2d2d-cd0a-4640-a778-b302014444c9";
         const string TestItemCardId = "1db665ae-2e24-426c-83d8-b302014703a5";
+        const string TestItemIdentityId = "e5f3057c-1728-41a6-96dd-b302014a783c";
 
         private static IServiceScope DatabaseSessionScope;
         private static SharpWarden.WebClient.WebClient VaultWebClient;
@@ -141,6 +142,34 @@ namespace Tests
             Assert.AreEqual(item.Card.ExpMonth.ClearString, "6");
             Assert.AreEqual(item.Card.Code.ClearString, "CardSecurityCode");
             Assert.AreEqual(item.Card.Brand.ClearString, "Visa");
+        }
+
+        [TestMethod]
+        public async Task _0008_TestItemCardAsync()
+        {
+            var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestItemIdentityId));
+
+            Assert.IsNotNull(item);
+            Assert.AreEqual(item.Id.ToString(), TestItemIdentityId);
+            Assert.AreEqual(item.Notes.ClearString, "IdentityNotes");
+
+            Assert.AreEqual(item.Identity.Address1.ClearString, "IdentityAddress1");
+            Assert.AreEqual(item.Identity.Address2.ClearString, "IdentityAddress2");
+            Assert.AreEqual(item.Identity.Address3.ClearString, "IdentityAddress3");
+            Assert.AreEqual(item.Identity.City.ClearString, "IdentityCity");
+            Assert.AreEqual(item.Identity.State.ClearString, "IdentityState");
+            Assert.AreEqual(item.Identity.PostalCode.ClearString, "IdentityPostalCode");
+            Assert.AreEqual(item.Identity.Country.ClearString, "IdentityCountry");
+            Assert.AreEqual(item.Identity.FirstName.ClearString, "IdentityFirstName");
+            Assert.AreEqual(item.Identity.MiddleName.ClearString, "IdentityMiddleName");
+            Assert.AreEqual(item.Identity.LastName.ClearString, "IdentityLastName");
+            Assert.AreEqual(item.Identity.Username.ClearString, "IdentityUserName");
+            Assert.AreEqual(item.Identity.Company.ClearString, "IdentityCompany");
+            Assert.AreEqual(item.Identity.SSN.ClearString, "IdentitySocialSecurityNumber");
+            Assert.AreEqual(item.Identity.PassportNumber.ClearString, "IdentityPassportNumber");
+            Assert.AreEqual(item.Identity.LicenseNumber.ClearString, "IdentityLicenseNumber");
+            Assert.AreEqual(item.Identity.Email.ClearString, "IdentityMail");
+            Assert.AreEqual(item.Identity.Phone.ClearString, "IdentityPhone");
         }
     }
 }

@@ -25,11 +25,6 @@ public class PasswordHistoryModel : ISessionAware
         Password?.SetCryptoService(_CryptoService);
     }
 
-    public void SetCryptoService(ICryptoService cryptoService)
-    {
-        
-    }
-
     [JsonProperty("lastUsedDate")]
     public DateTime? LastUsedDate { get; set; }
 

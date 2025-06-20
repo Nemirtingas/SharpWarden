@@ -31,6 +31,7 @@ public class IdentityFieldModel : ISessionAware
         Email?.SetCryptoService(_CryptoService);
         FirstName?.SetCryptoService(_CryptoService);
         LastName?.SetCryptoService(_CryptoService);
+        Username?.SetCryptoService(_CryptoService);
         LicenseNumber?.SetCryptoService(_CryptoService);
         MiddleName?.SetCryptoService(_CryptoService);
         PassportNumber?.SetCryptoService(_CryptoService);
@@ -39,11 +40,6 @@ public class IdentityFieldModel : ISessionAware
         SSN?.SetCryptoService(_CryptoService);
         State?.SetCryptoService(_CryptoService);
         Title?.SetCryptoService(_CryptoService);
-    }
-
-    public void SetCryptoService(ICryptoService cryptoService)
-    {
-        
     }
 
     [JsonProperty("address1")]

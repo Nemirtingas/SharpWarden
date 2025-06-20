@@ -7,6 +7,10 @@ public class UriModel
 {
     private IUserCryptoService _CryptoService;
 
+    public UriModel()
+    {
+    }
+
     public UriModel(IUserCryptoService cryptoService)
     {
         SetCryptoService(cryptoService);
