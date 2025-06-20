@@ -31,10 +31,7 @@ public class WebClient
         _JsonSerializer = jsonSerializer;
         _Guid = Guid.NewGuid();
         _WebSession = new LoginModel();
-        _HttpClient = new HttpClient(new HttpClientHandler { AutomaticDecompression = System.Net.DecompressionMethods.Deflate })
-        {
-            BaseAddress = new Uri(baseUrl)
-        };
+        _HttpClient = new HttpClient{ BaseAddress = new Uri(baseUrl) };
     }
 
     private T _Deserialize<T>(Stream stream)
