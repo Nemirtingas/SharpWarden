@@ -9,6 +9,7 @@
 	<PackageId>SharpWarden</PackageId>
 	<Version>0.3.1</Version>
 	<Authors>Nemirtingas</Authors>
+	<PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
