@@ -2,9 +2,13 @@ name: Test .NET Library
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - sensitive/*
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+      - sensitive/*
 
 jobs:
   test:
