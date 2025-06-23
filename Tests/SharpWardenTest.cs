@@ -28,7 +28,7 @@ public sealed class SharpWardenTest
 
     static SharpWardenTest()
     {
-        DatabaseSessionScope = SharpWarden.BitWardenHelper.CreateSessionScope("https://vault.bitwarden.eu");
+        DatabaseSessionScope = SharpWarden.BitWardenHelper.CreateSessionScope(SharpWarden.WebClient.WebClient.BitWardenEUHostUrl);
         VaultWebClient = DatabaseSessionScope.ServiceProvider.GetRequiredService<SharpWarden.WebClient.WebClient>();
         VaultService = DatabaseSessionScope.ServiceProvider.GetRequiredService<IVaultService>();
         UserCryptoService = DatabaseSessionScope.ServiceProvider.GetRequiredService<IUserCryptoService>();

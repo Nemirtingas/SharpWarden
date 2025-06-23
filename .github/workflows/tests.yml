@@ -20,7 +20,8 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
 
     env:
-      SHARP_WARDEN_TEST_ACCOUNT_NAME: ${{ secrets.SHARP_WARDEN_TEST_ACCOUNT_NAME }}
+      SHARP_WARDEN_TEST_ACCOUNT_USER: ${{ secrets.SHARP_WARDEN_TEST_ACCOUNT_USER }}
+      SHARP_WARDEN_TEST_ACCOUNT_SECRET: ${{ secrets.SHARP_WARDEN_TEST_ACCOUNT_SECRET }}
       SHARP_WARDEN_TEST_ACCOUNT_PASSWORD: ${{ secrets.SHARP_WARDEN_TEST_ACCOUNT_PASSWORD }}
 
     steps:
