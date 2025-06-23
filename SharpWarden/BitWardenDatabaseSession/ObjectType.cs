@@ -37,4 +37,6 @@ public enum ObjectType
     List,
     [EnumMember(Value = "attachment-fileUpload")]
     AttachmentFileUpload,
+    [EnumMember(Value = "error")]
+    Error,
 }

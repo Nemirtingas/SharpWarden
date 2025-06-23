@@ -13,11 +13,11 @@ public class LoginModel
     [JsonProperty("KdfIterations")]
     public int KdfIterations { get; set; }
 
-    [JsonProperty("KdfMemory")]
-    public object KdfMemory { get; set; }
+    //[JsonProperty("KdfMemory")]
+    //public object KdfMemory { get; set; }
 
-    [JsonProperty("KdfParallelism")]
-    public object KdfParallelism { get; set; }
+    //[JsonProperty("KdfParallelism")]
+    //public object KdfParallelism { get; set; }
 
     [JsonProperty("Key")]
     public string Key { get; set; }
@@ -83,5 +83,19 @@ public class LoginModel
         RefreshToken = refreshModel.RefreshToken;
         Scope = refreshModel.Scope;
         TokenType = refreshModel.TokenType;
+    }
+
+    public void UpdateSession(ApiKeyLoginModel apiKeyLoginModel)
+    {
+        AccessToken = apiKeyLoginModel.AccessToken;
+        ExpiresIn = apiKeyLoginModel.ExpiresIn;
+        Kdf = apiKeyLoginModel.Kdf;
+        KdfIterations = apiKeyLoginModel.KdfIterations;
+        Key = apiKeyLoginModel.Key;
+        PrivateKey = apiKeyLoginModel.PrivateKey;
+        ForcePasswordReset = apiKeyLoginModel.ForcePasswordReset;
+        ResetMasterPassword = apiKeyLoginModel.ResetMasterPassword;
+        Scope = apiKeyLoginModel.Scope;
+        TokenType = apiKeyLoginModel.TokenType;
     }
 }

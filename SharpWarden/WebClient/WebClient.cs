@@ -9,12 +9,14 @@ using SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
 using SharpWarden.BitWardenDatabaseSession.Models.ProfileItem;
 using SharpWarden.BitWardenDatabaseSession;
 using SharpWarden.BitWardenDatabaseSession.Services;
+using SharpWarden.WebClient.Exceptions;
 
 namespace SharpWarden.WebClient;
 
 public class WebClient
 {
     private Guid _Guid;
+    private string _DeviceVersion;
     private readonly HttpClient _HttpClient;
     private LoginModel _WebSession;
     private string _Username;
@@ -24,14 +26,31 @@ public class WebClient
     public const string SSHKeyCipherMinimumVersion = "2024.12.0";
     public const string DenyLegacyUserMinimumVersion = "2025.6.0";
 
+    public const string BitWardenComHostUrl = "https://vault.bitwarden.com";
+    public const string BitWardenEUHostUrl = "https://vault.bitwarden.eu";
+
+    /// <summary>
+    /// If <paramref name="deviceVersion"/> is not at least <see cref="SSHKeyCipherMinimumVersion"/>, ssh keys will not be returned by <see cref="GetDatabaseAsync"/>.
+    /// </summary>
+    /// <param name="jsonSerializer"></param>
+    /// <param name="bitwardenHostUrl"></param>
+    /// <param name="deviceVersion"></param>
+    /// <param name="deviceId"></param>
     public WebClient(
         ISessionJsonConverterService jsonSerializer,
-        string baseUrl)
+        string bitwardenHostUrl,
+        string deviceVersion,
+        Guid? deviceId = null)
     {
         _JsonSerializer = jsonSerializer;
-        _Guid = Guid.NewGuid();
+        _Guid = deviceId ?? Guid.NewGuid();
+        _DeviceVersion = string.IsNullOrWhiteSpace(deviceVersion) ? DenyLegacyUserMinimumVersion : deviceVersion;
         _WebSession = new LoginModel();
-        _HttpClient = new HttpClient{ BaseAddress = new Uri(baseUrl) };
+        _HttpClient = new HttpClient{ BaseAddress = new Uri(bitwardenHostUrl) };
+        _HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0");
+        _HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("device-type", $"{(int)DeviceType.Sdk}");
+        _HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("Bitwarden-Client-Name", "web");
+        _HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("Bitwarden-Client-Version", _DeviceVersion);
     }
 
     private T _Deserialize<T>(Stream stream)
@@ -45,11 +64,53 @@ public class WebClient
         return new StringContent(_Serialize(apiModel), Encoding.UTF8, new MediaTypeHeaderValue("application/json", "charset=utf-8"));
     }
 
+    private async Task<HttpResponseMessage> _PostAuthenticateAsync(byte[] passwordBytes, string otp)
+    {
+        if (string.IsNullOrWhiteSpace(_Username) || !(_WebSession?.KdfIterations > 0))
+            throw new InvalidOperationException("Prelogin must be called prior to " + nameof(AuthenticateAsync) + " .");
+
+        var masterKey = BitWardenCipherService.ComputeMasterKey(Encoding.UTF8.GetBytes(_Username), passwordBytes, _WebSession.KdfIterations);
+        var userPasswordHash = BitWardenCipherService.ComputeUserPasswordHash(masterKey, passwordBytes);
+
+        var parameters = new Dictionary<string, string>{
+            { "scope"           , "api offline_access" },
+            { "client_id"       , "web" },
+            { "deviceType"      , $"{(int)DeviceType.Sdk}" },
+            { "deviceIdentifier", _Guid.ToString() },
+            { "deviceName"      , "SharpWarden" },
+            { "grant_type"      , "password" },
+            { "username"        , _Username },
+            { "password"        , Convert.ToBase64String(userPasswordHash) },
+        };
+
+        if (!string.IsNullOrWhiteSpace(otp))
+            parameters.Add("newDeviceOtp", otp);
+
+        var content = new FormUrlEncodedContent(parameters);
+        var response = await _HttpClient.PostAsync("/identity/connect/token", content);
+
+        if (response.StatusCode != System.Net.HttpStatusCode.BadRequest)
+            response.EnsureSuccessStatusCode();
+
+        return response;
+    }
+
     public LoginModel GetWebSession() => _WebSession.Clone();
 
     public int UserKdfIterations => _WebSession.KdfIterations;
     public string UserKey => _WebSession.Key;
     public string UserPrivateKey => _WebSession.PrivateKey;
+
+    // Not sure how to make this work, it always returns false.
+    //public async Task<bool> KnownDeviceAsync(string username)
+    //{
+    //    var request = new HttpRequestMessage(HttpMethod.Get, "/api/devices/knowndevice");
+    //    request.Headers.TryAddWithoutValidation("x-device-identifier", _Guid.ToString());
+    //    request.Headers.TryAddWithoutValidation("x-request-email", "???");
+    //    var response = await _HttpClient.SendAsync(request);
+    //    response.EnsureSuccessStatusCode();
+    //    return bool.Parse(await response.Content.ReadAsStringAsync());
+    //}
 
     public async Task PreloginAsync(string username)
     {
@@ -61,44 +122,49 @@ public class WebClient
         _Username = username;
     }
 
+    public Task AuthenticateAsync(string password)
+        => AuthenticateAsync(password, null);
+
     /// <summary>
-    /// If <paramref name="deviceVersion"/> is not at least <see cref="SSHKeyCipherMinimumVersion"/>, ssh keys will not be returned by <see cref="GetDatabaseAsync"/>.
     /// </summary>
     /// <param name="password"></param>
-    /// <param name="deviceVersion"></param>
-    /// <param name="deviceType"></param>
+    /// <param name="newDeviceOtpAsyncCallback">A callback that will be run if a device OTP is needed to login.</param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
-    public async Task AuthenticateAsync(string password, string deviceVersion = DenyLegacyUserMinimumVersion,  DeviceType deviceType = DeviceType.Sdk)
+    /// <exception cref="BitWardenHttpRequestException"></exception>
+    public async Task AuthenticateAsync(string password, Func<Task<string>> newDeviceOtpAsyncCallback)
     {
         if (string.IsNullOrWhiteSpace(_Username) || !(_WebSession?.KdfIterations > 0))
             throw new InvalidOperationException("Prelogin must be called prior to " + nameof(AuthenticateAsync) + " .");
 
         var passwordBytes = Encoding.UTF8.GetBytes(password);
-        var masterKey = BitWardenCipherService.ComputeMasterKey(Encoding.UTF8.GetBytes(_Username), passwordBytes, _WebSession.KdfIterations);
-        var userPasswordHash = BitWardenCipherService.ComputeUserPasswordHash(masterKey, passwordBytes);
+        var response = await _PostAuthenticateAsync(passwordBytes, null);
+        if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+        {
+            var genericError = _Deserialize<ErrorResponseModel>(await response.Content.ReadAsStreamAsync());
+            if (genericError.ErrorType == ErrorType.DeviceError && newDeviceOtpAsyncCallback != null)
+            {
+                var otp = await newDeviceOtpAsyncCallback();
+                if (string.IsNullOrWhiteSpace(otp))
+                    throw new BitWardenHttpRequestException(genericError.ErrorType ?? ErrorType.Unknown, genericError.Description);
 
-        var parameters = new Dictionary<string, string>{
-            { "scope"           , "api offline_access" },
-            { "client_id"       , "web" },
-            { "deviceType"      , $"{(int)deviceType}" },
-            { "deviceIdentifier", _Guid.ToString() },
-            { "deviceName"      , "SharpWarden" },
-            { "grant_type"      , "password" },
-            { "username"        , _Username },
-            { "password"        , Convert.ToBase64String(userPasswordHash) },
-        };
-
-        var content = new FormUrlEncodedContent(parameters);
-
-        var response = await _HttpClient.PostAsync("/identity/connect/token", content);
-        response.EnsureSuccessStatusCode();
+                response = await _PostAuthenticateAsync(passwordBytes, otp);
+                if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                {
+                    genericError = _Deserialize<ErrorResponseModel>(await response.Content.ReadAsStreamAsync());
+                    throw new BitWardenHttpRequestException(genericError.ErrorType ?? ErrorType.Unknown, genericError.Description);
+                }
+            }
+            else
+            {
+                throw new BitWardenHttpRequestException(genericError.ErrorType ?? ErrorType.Unknown, genericError.Description);
+            }
+        }
 
         _WebSession = _Deserialize<LoginModel>(await response.Content.ReadAsStreamAsync());
 
+        _HttpClient.DefaultRequestHeaders.Remove("Bearer");
         _HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _WebSession.AccessToken);
-        _HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("Bitwarden-Client-Name", "web");
-        _HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("Bitwarden-Client-Version", deviceVersion);
     }
 
     public async Task AuthenticateWithRefreshTokenAsync(string refreshToken)
@@ -119,6 +185,35 @@ public class WebClient
 
         _WebSession.UpdateSession(_Deserialize<RefreshModel>(await response.Content.ReadAsStreamAsync()));
 
+        _HttpClient.DefaultRequestHeaders.Remove("Bearer");
+        _HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _WebSession.AccessToken);
+
+        var profile = await GetAccountProfileAsync();
+
+        _WebSession.Key = profile.Key.CipherString;
+        _WebSession.PrivateKey = profile.PrivateKey.CipherString;
+    }
+
+    public async Task AuthenticateWithApiKeyAsync(string clientId, string clientSecret)
+    {
+        var parameters = new Dictionary<string, string>{
+            { "scope"           , "api"                    },
+            { "grant_type"      , "client_credentials"     },
+            { "deviceType"      , $"{(int)DeviceType.Sdk}" },
+            { "deviceIdentifier", _Guid.ToString()         },
+            { "deviceName"      , "SharpWarden"            },
+            { "client_id"       , clientId                 },
+            { "client_secret"   , clientSecret             },
+        };
+
+        var content = new FormUrlEncodedContent(parameters);
+
+        var response = await _HttpClient.PostAsync("/identity/connect/token", content);
+        response.EnsureSuccessStatusCode();
+
+        _WebSession.UpdateSession(_Deserialize<ApiKeyLoginModel>(await response.Content.ReadAsStreamAsync()));
+
+        _HttpClient.DefaultRequestHeaders.Remove("Bearer");
         _HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _WebSession.AccessToken);
 
         var profile = await GetAccountProfileAsync();
