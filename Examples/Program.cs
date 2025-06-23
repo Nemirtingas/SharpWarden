@@ -7,7 +7,6 @@ using SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
 using SharpWarden.BitWardenDatabaseSession.Models.CollectionItem;
 using SharpWarden.BitWardenDatabaseSession.Models.FolderItem;
 using SharpWarden.BitWardenDatabaseSession.Services;
-
 namespace SharpWardenExamples;
 
 class Example
@@ -266,13 +265,20 @@ class Example
         await VaultWebClient.CreateCipherItemAttachmentAsync(item.Id.Value, encryptedName.CipherString, encryptedKey.CipherString, cryptedAttachmentStream);
     }
 
+    static Task<string> WaitForUserOTPAsync()
+    {
+        Console.Write("Type the received otp code: ");
+        return Task.FromResult(Console.ReadLine().Trim());
+    }
+
     static async Task LoadOnlineDatabaseAsync(string email, string password, string refreshToken)
     {
-        await VaultWebClient.PreloginAsync(email);
+        await VaultWebClient.AuthenticateWithApiKeyAsync(email, password);
 
-        // Authenticating with credentials triggers a mail notification.
-        // TODO: API key authentication
-        await VaultWebClient.AuthenticateAsync(password);
+        // Authenticating with credentials triggers a mail notification and probably an OTP request.
+        //await VaultWebClient.PreloginAsync(email);
+        //await VaultWebClient.AuthenticateAsync(password, WaitForUserOTPAsync);
+
         //await VaultWebClient.AuthenticateWithRefreshTokenAsync(refreshToken);
 
         VaultService.LoadBitWardenDatabase(
@@ -294,9 +300,7 @@ class Example
 
     static async Task MainAsync()
     {
-        const string bitWardenHost = "https://bitwarden.com";
-
-        using (BitWardenDatabaseSessionScope = BitWardenHelper.CreateSessionScope(bitWardenHost))
+        using (BitWardenDatabaseSessionScope = BitWardenHelper.CreateSessionScope(SharpWarden.WebClient.WebClient.BitWardenEUHostUrl))
         {
             VaultWebClient = BitWardenDatabaseSessionScope.ServiceProvider.GetRequiredService<SharpWarden.WebClient.WebClient>();
             VaultService = BitWardenDatabaseSessionScope.ServiceProvider.GetRequiredService<IVaultService>();

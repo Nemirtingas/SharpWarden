@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
 using SharpWarden.BitWardenDatabaseSession.Services;
 using System.Text;
@@ -21,34 +21,42 @@ public sealed class SharpWardenTest
     private static SharpWarden.WebClient.WebClient VaultWebClient;
     private static IVaultService VaultService;
     private static IUserCryptoService UserCryptoService;
-    private static string TestAccountEmail;
+    private static string TestAccountUser;
+    private static string TestAccountSecret;
     private static string TestAccountPassword;
 
 
     static SharpWardenTest()
     {
-        DatabaseSessionScope = SharpWarden.BitWardenHelper.CreateSessionScope("https://vault.bitwarden.eu");
+        DatabaseSessionScope = SharpWarden.BitWardenHelper.CreateSessionScope(SharpWarden.WebClient.WebClient.BitWardenEUHostUrl);
         VaultWebClient = DatabaseSessionScope.ServiceProvider.GetRequiredService<SharpWarden.WebClient.WebClient>();
         VaultService = DatabaseSessionScope.ServiceProvider.GetRequiredService<IVaultService>();
         UserCryptoService = DatabaseSessionScope.ServiceProvider.GetRequiredService<IUserCryptoService>();
-        TestAccountEmail = Environment.GetEnvironmentVariable("SHARP_WARDEN_TEST_ACCOUNT_NAME");
+        TestAccountUser = Environment.GetEnvironmentVariable("SHARP_WARDEN_TEST_ACCOUNT_USER");
+        TestAccountSecret = Environment.GetEnvironmentVariable("SHARP_WARDEN_TEST_ACCOUNT_SECRET");
         TestAccountPassword = Environment.GetEnvironmentVariable("SHARP_WARDEN_TEST_ACCOUNT_PASSWORD");
     }
 
+    // This test works, but you need to send it back the OTP code, which is obviously impossible in github actions.
+    //[TestMethod]
+    //public async Task _0001_TestCredentialsLogin()
+    //{
+    //    Assert.IsFalse(string.IsNullOrWhiteSpace(TestAccountUser));
+    //    Assert.IsFalse(string.IsNullOrWhiteSpace(TestAccountPassword));
+    //
+    //    await VaultWebClient.PreloginAsync(TestAccountUser);
+    //
+    //    // Authenticating with credentials triggers a mail notification.
+    //    await VaultWebClient.AuthenticateAsync(TestAccountPassword);
+    //}
+
     [TestMethod]
-    public async Task _0001_TestCredentialsLogin()
+    public async Task _0001_TestApiKeyLogin()
     {
-        Assert.IsFalse(string.IsNullOrWhiteSpace(TestAccountEmail));
-        Assert.IsFalse(string.IsNullOrWhiteSpace(TestAccountPassword));
-
-        await VaultWebClient.PreloginAsync(TestAccountEmail);
-
-        // Authenticating with credentials triggers a mail notification.
-        // TODO: API key authentication
-        await VaultWebClient.AuthenticateAsync(TestAccountPassword);
-        //await VaultWebClient.AuthenticateWithRefreshTokenAsync(refreshToken);
-
-        
+        Assert.IsFalse(string.IsNullOrWhiteSpace(TestAccountUser));
+        Assert.IsFalse(string.IsNullOrWhiteSpace(TestAccountSecret));
+    
+        await VaultWebClient.AuthenticateWithApiKeyAsync(TestAccountUser, TestAccountSecret);
     }
 
     [TestMethod]
