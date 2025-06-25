@@ -101,6 +101,8 @@ public class WebClient
     public string UserKey => _WebSession.Key;
     public string UserPrivateKey => _WebSession.PrivateKey;
 
+    public DateTime ExpiresAt { get; private set; }
+
     // Not sure how to make this work, it always returns false.
     //public async Task<bool> KnownDeviceAsync(string username)
     //{
@@ -139,6 +141,7 @@ public class WebClient
 
         var passwordBytes = Encoding.UTF8.GetBytes(password);
         var response = await _PostAuthenticateAsync(passwordBytes, null);
+        var responseAt = DateTime.UtcNow;
         if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
         {
             var genericError = _Deserialize<ErrorResponseModel>(await response.Content.ReadAsStreamAsync());
@@ -149,6 +152,7 @@ public class WebClient
                     throw new BitWardenHttpRequestException(genericError.ErrorType ?? ErrorType.Unknown, genericError.Description);
 
                 response = await _PostAuthenticateAsync(passwordBytes, otp);
+                responseAt = DateTime.UtcNow;
                 if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
                 {
                     genericError = _Deserialize<ErrorResponseModel>(await response.Content.ReadAsStreamAsync());
@@ -162,6 +166,7 @@ public class WebClient
         }
 
         _WebSession = _Deserialize<LoginModel>(await response.Content.ReadAsStreamAsync());
+        ExpiresAt = responseAt.AddSeconds(-_WebSession.ExpiresIn - 300);
 
         _HttpClient.DefaultRequestHeaders.Remove("Bearer");
         _HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _WebSession.AccessToken);
@@ -181,9 +186,11 @@ public class WebClient
         var content = new FormUrlEncodedContent(parameters);
 
         var response = await _HttpClient.PostAsync("/identity/connect/token", content);
+        var responseAt = DateTime.UtcNow;
         response.EnsureSuccessStatusCode();
 
         _WebSession.UpdateSession(_Deserialize<RefreshModel>(await response.Content.ReadAsStreamAsync()));
+        ExpiresAt = responseAt.AddSeconds(-_WebSession.ExpiresIn - 300);
 
         _HttpClient.DefaultRequestHeaders.Remove("Bearer");
         _HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _WebSession.AccessToken);
@@ -209,9 +216,11 @@ public class WebClient
         var content = new FormUrlEncodedContent(parameters);
 
         var response = await _HttpClient.PostAsync("/identity/connect/token", content);
+        var responseAt = DateTime.UtcNow;
         response.EnsureSuccessStatusCode();
 
         _WebSession.UpdateSession(_Deserialize<ApiKeyLoginModel>(await response.Content.ReadAsStreamAsync()));
+        ExpiresAt = responseAt.AddSeconds(-_WebSession.ExpiresIn - 300);
 
         _HttpClient.DefaultRequestHeaders.Remove("Bearer");
         _HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _WebSession.AccessToken);
