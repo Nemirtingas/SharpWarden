@@ -8,14 +8,18 @@ namespace Tests;
 [TestClass]
 public sealed class SharpWardenTest
 {
-    const string SharpWardenTestItemId = "1de1488c-f980-446a-bb5a-b30201265744";
-    const string SharpWardenTestFolderId = "01c15505-4683-48c2-a3fb-b302013ba7a0";
-    const string SharpWardenTestItemInFolderId = "348270df-0c8e-4e05-8997-b30201427190";
-    const string TestItemLoginId = "a65b2d2d-cd0a-4640-a778-b302014444c9";
-    const string TestItemCardId = "1db665ae-2e24-426c-83d8-b302014703a5";
-    const string TestItemIdentityId = "e5f3057c-1728-41a6-96dd-b302014a783c";
-    const string TestItemSecureNoteId = "be880b58-d562-4c4a-8abf-b302015348b6";
-    const string TestItemSSHKeyId = "5221df17-19e4-408b-b27f-b30201547789";
+    const string TestUserItemId = "1de1488c-f980-446a-bb5a-b30201265744";
+    const string TestUserFolderId = "01c15505-4683-48c2-a3fb-b302013ba7a0";
+    const string TestUserItemInFolderId = "348270df-0c8e-4e05-8997-b30201427190";
+    const string TestUserItemLoginId = "a65b2d2d-cd0a-4640-a778-b302014444c9";
+    const string TestUserItemCardId = "1db665ae-2e24-426c-83d8-b302014703a5";
+    const string TestUserItemIdentityId = "e5f3057c-1728-41a6-96dd-b302014a783c";
+    const string TestUserItemSecureNoteId = "be880b58-d562-4c4a-8abf-b302015348b6";
+    const string TestUserItemSSHKeyId = "5221df17-19e4-408b-b27f-b30201547789";
+    const string TestUserItemCustomFieldsId = "c59db8cb-3036-49cb-a16d-b307006c213d";
+
+    const string TestOrganizationId = "9dab2223-5ee2-480d-ace2-b3020126075b";
+    const string TestOrganizationItemId = "2c94bf3f-fcfe-48eb-b19c-b307006b69be";
 
     private static IServiceScope DatabaseSessionScope;
     private static SharpWarden.WebClient.WebClient VaultWebClient;
@@ -69,47 +73,48 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _0003_TestCipherItemAsync()
+    public async Task _1003_TestUserCipherItemAsync()
     {
-        var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(SharpWardenTestItemId));
+        var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemId));
 
         Assert.IsNotNull(item);
-        Assert.AreEqual(item.Id.ToString(), SharpWardenTestItemId);
+        Assert.AreEqual(item.Id.ToString(), TestUserItemId);
+        Assert.AreEqual(item.Reprompt, CipherRepromptType.Password);
         Assert.AreEqual(item.Name.ClearString, "SharpWardenTestItem");
         Assert.AreEqual(item.Login.Username.ClearString, "TestUserName");
         Assert.AreEqual(item.Login.Password.ClearString, "TestPassword");
     }
 
     [TestMethod]
-    public async Task _0004_TestFolderItemAsync()
+    public async Task _1004_TestUserFolderItemAsync()
     {
-        var folder = VaultService.GetBitWardenDatabase().Folders.Find(e => e.Id == Guid.Parse(SharpWardenTestFolderId));
+        var folder = VaultService.GetBitWardenDatabase().Folders.Find(e => e.Id == Guid.Parse(TestUserFolderId));
 
         Assert.IsNotNull(folder);
-        Assert.AreEqual(folder.Id.ToString(), SharpWardenTestFolderId);
+        Assert.AreEqual(folder.Id.ToString(), TestUserFolderId);
         Assert.AreEqual(folder.Name.ClearString, "SharpWardenTestFolder");
     }
 
     [TestMethod]
-    public async Task _0005_TestItemInFolderAsync()
+    public async Task _1005_TestUserItemInFolderAsync()
     {
-        var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(SharpWardenTestItemInFolderId));
+        var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemInFolderId));
 
         Assert.IsNotNull(item);
-        Assert.AreEqual(item.Id.ToString(), SharpWardenTestItemInFolderId);
+        Assert.AreEqual(item.Id.ToString(), TestUserItemInFolderId);
         Assert.AreEqual(item.Name.ClearString, "SharpWardenTestItemInFolder");
         Assert.AreEqual(item.Login.Username.ClearString, "FolderUser");
         Assert.AreEqual(item.Login.Password.ClearString, "FolderPassword");
-        Assert.AreEqual(item.FolderId, Guid.Parse(SharpWardenTestFolderId));
+        Assert.AreEqual(item.FolderId, Guid.Parse(TestUserFolderId));
     }
 
     [TestMethod]
-    public async Task _0006_TestItemLoginAsync()
+    public async Task _1006_TestUserItemLoginAsync()
     {
-        var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestItemLoginId));
+        var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemLoginId));
 
         Assert.IsNotNull(item);
-        Assert.AreEqual(item.Id.ToString(), TestItemLoginId);
+        Assert.AreEqual(item.Id.ToString(), TestUserItemLoginId);
         Assert.AreEqual(item.ItemType, CipherItemType.Login);
         Assert.AreEqual(item.Notes.ClearString, "LoginNotes");
 
@@ -139,12 +144,12 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _0007_TestItemCardAsync()
+    public async Task _1007_TestUserItemCardAsync()
     {
-        var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestItemCardId));
+        var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemCardId));
 
         Assert.IsNotNull(item);
-        Assert.AreEqual(item.Id.ToString(), TestItemCardId);
+        Assert.AreEqual(item.Id.ToString(), TestUserItemCardId);
         Assert.AreEqual(item.ItemType, CipherItemType.Card);
         Assert.AreEqual(item.Notes.ClearString, "CardNotes");
 
@@ -157,12 +162,12 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _0008_TestItemIdentityAsync()
+    public async Task _1008_TestUserItemIdentityAsync()
     {
-        var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestItemIdentityId));
+        var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemIdentityId));
 
         Assert.IsNotNull(item);
-        Assert.AreEqual(item.Id.ToString(), TestItemIdentityId);
+        Assert.AreEqual(item.Id.ToString(), TestUserItemIdentityId);
         Assert.AreEqual(item.ItemType, CipherItemType.Identity);
         Assert.AreEqual(item.Notes.ClearString, "IdentityNotes");
 
@@ -186,12 +191,12 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _0009_TestItemSecureNoteAsync()
+    public async Task _1009_TestUserItemSecureNoteAsync()
     {
-        var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestItemSecureNoteId));
+        var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemSecureNoteId));
 
         Assert.IsNotNull(item);
-        Assert.AreEqual(item.Id.ToString(), TestItemSecureNoteId);
+        Assert.AreEqual(item.Id.ToString(), TestUserItemSecureNoteId);
         Assert.AreEqual(item.ItemType, CipherItemType.SecureNote);
         Assert.AreEqual(item.Notes.ClearString, "SecureNoteNotes");
 
@@ -199,17 +204,64 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _0010_TestItemSSHKeyAsync()
+    public async Task _1010_TestUserItemSSHKeyAsync()
     {
-        var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestItemSSHKeyId));
+        var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemSSHKeyId));
 
         Assert.IsNotNull(item);
-        Assert.AreEqual(item.Id.ToString(), TestItemSSHKeyId);
+        Assert.AreEqual(item.Id.ToString(), TestUserItemSSHKeyId);
         Assert.AreEqual(item.ItemType, CipherItemType.SSHKey);
         Assert.AreEqual(item.Notes.ClearString, "SSHKeyNotes");
 
         Assert.AreEqual(item.SSHKey.KeyFingerprint.ClearString, "SHA256:dbBC+ec5IlSfcufRZnalIk2q5ISTup3nff6mdjAccVI");
         Assert.AreEqual(item.SSHKey.PublicKey.ClearString, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKoMZebfc4izVVC0pjt9KNAtpVQ15X1MgpdzjloRAP3N");
         Assert.AreEqual(item.SSHKey.PrivateKey.ClearString, "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\nQyNTUxOQAAACCqDGXm33OIs1VQtKY7fSjQLaVUNeV9TIKXc45aEQD9zQAAAIhBcXK7QXFy\nuwAAAAtzc2gtZWQyNTUxOQAAACCqDGXm33OIs1VQtKY7fSjQLaVUNeV9TIKXc45aEQD9zQ\nAAAEAZBznOkm7Q61yxXzyWOmVw+OPn7eKOBpcf4cELcPnPnKoMZebfc4izVVC0pjt9KNAt\npVQ15X1MgpdzjloRAP3NAAAAAAECAwQF\n-----END OPENSSH PRIVATE KEY-----\n");
+    }
+
+    [TestMethod]
+    public async Task _1011_TestUserItemCustomFieldsAsync()
+    {
+        var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemCustomFieldsId));
+
+        Assert.IsNotNull(item);
+        Assert.AreEqual(item.Id.ToString(), TestUserItemCustomFieldsId);
+        Assert.AreEqual(item.Name.ClearString, "SharpWardenCustomFields");
+        Assert.AreEqual(item.ItemType, CipherItemType.Login);
+        Assert.AreEqual(item.Notes.ClearString, "CustomFields");
+
+        Assert.AreEqual(item.Fields.Count, 5);
+
+        Assert.AreEqual(item.Fields[0].Name.ClearString, "TextField");
+        Assert.AreEqual(item.Fields[0].Value.ClearString, "TextFieldValue");
+        Assert.AreEqual(item.Fields[0].Type, CustomFieldType.Text);
+
+        Assert.AreEqual(item.Fields[1].Name.ClearString, "HiddenField");
+        Assert.AreEqual(item.Fields[1].Value.ClearString, "HiddenFieldValue");
+        Assert.AreEqual(item.Fields[1].Type, CustomFieldType.Hidden);
+
+        Assert.AreEqual(item.Fields[2].Name.ClearString, "CheckBoxField");
+        Assert.AreEqual(item.Fields[2].Value.ClearString, "true");
+        Assert.AreEqual(item.Fields[2].Type, CustomFieldType.Boolean);
+
+        Assert.AreEqual(item.Fields[3].Name.ClearString, "LinkedFieldLoginUserName");
+        Assert.AreEqual(item.Fields[3].LinkedId, CustomFieldLinkType.LoginUsername);
+        Assert.AreEqual(item.Fields[3].Type, CustomFieldType.Linked);
+
+        Assert.AreEqual(item.Fields[4].Name.ClearString, "LinkedFieldLoginPassword");
+        Assert.AreEqual(item.Fields[4].LinkedId, CustomFieldLinkType.LoginPassword);
+        Assert.AreEqual(item.Fields[4].Type, CustomFieldType.Linked);
+    }
+
+    [TestMethod]
+    public async Task _2001_TestOrganizationCipherItemAsync()
+    {
+        var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestOrganizationItemId) && e.OrganizationId == Guid.Parse(TestOrganizationId));
+
+        Assert.IsNotNull(item);
+        Assert.AreEqual(item.Id.ToString(), TestOrganizationItemId);
+        Assert.AreEqual(item.Name.ClearString, "SharpWardenOrganizationEntry");
+        Assert.AreEqual(item.Login.Username.ClearString, "OrganizationUsername");
+        Assert.AreEqual(item.Login.Password.ClearString, "OrganizationPassword");
+        Assert.AreEqual(item.Login.TOTP.ClearString, "OrganizationAuthenticatorKey");
     }
 }
