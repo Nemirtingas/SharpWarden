@@ -21,6 +21,9 @@ public class WebClient
     private LoginModel _WebSession;
     private string _Username;
     private readonly ISessionJsonConverterService _JsonSerializer;
+    private string _BaseUrl;
+
+    private const int AuthTokenExpirationThreshold = 60;
 
     public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
     public const string SSHKeyCipherMinimumVersion = "2024.12.0";
@@ -46,7 +49,8 @@ public class WebClient
         _Guid = deviceId ?? Guid.NewGuid();
         _DeviceVersion = string.IsNullOrWhiteSpace(deviceVersion) ? DenyLegacyUserMinimumVersion : deviceVersion;
         _WebSession = new LoginModel();
-        _HttpClient = new HttpClient{ BaseAddress = new Uri(bitwardenHostUrl) };
+        _HttpClient = new HttpClient();
+        _BaseUrl = bitwardenHostUrl.EndsWith('/') ? bitwardenHostUrl.Remove(bitwardenHostUrl.Length-1) : bitwardenHostUrl;
         _HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0");
         _HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("device-type", $"{(int)DeviceType.Sdk}");
         _HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("Bitwarden-Client-Name", "web");
@@ -61,7 +65,7 @@ public class WebClient
 
     private StringContent _APIModelToContent<T>(T apiModel)
     {
-        return new StringContent(_Serialize(apiModel), Encoding.UTF8, new MediaTypeHeaderValue("application/json", "charset=utf-8"));
+        return new StringContent(_Serialize(apiModel), Encoding.UTF8, new MediaTypeHeaderValue("application/json", "utf-8"));
     }
 
     private async Task<HttpResponseMessage> _PostAuthenticateAsync(byte[] passwordBytes, string otp)
@@ -87,7 +91,7 @@ public class WebClient
             parameters.Add("newDeviceOtp", otp);
 
         var content = new FormUrlEncodedContent(parameters);
-        var response = await _HttpClient.PostAsync("/identity/connect/token", content);
+        var response = await _HttpClient.PostAsync($"{_BaseUrl}/identity/connect/token", content);
 
         if (response.StatusCode != System.Net.HttpStatusCode.BadRequest)
             response.EnsureSuccessStatusCode();
@@ -117,7 +121,7 @@ public class WebClient
     public async Task PreloginAsync(string username)
     {
         var content = new StringContent(new JObject { { "email", username } }.ToString(), new UTF8Encoding(false), "application/json");
-        var response = await _HttpClient.PostAsync("/identity/accounts/prelogin", content);
+        var response = await _HttpClient.PostAsync($"{_BaseUrl}/identity/accounts/prelogin", content);
         response.EnsureSuccessStatusCode();
 
         _WebSession.KdfIterations = _Deserialize<PreLoginModel>(await response.Content.ReadAsStreamAsync()).KdfIterations;
@@ -166,7 +170,7 @@ public class WebClient
         }
 
         _WebSession = _Deserialize<LoginModel>(await response.Content.ReadAsStreamAsync());
-        ExpiresAt = responseAt.AddSeconds(-_WebSession.ExpiresIn - 300);
+        ExpiresAt = responseAt.AddSeconds(-_WebSession.ExpiresIn - AuthTokenExpirationThreshold);
 
         _HttpClient.DefaultRequestHeaders.Remove("Bearer");
         _HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _WebSession.AccessToken);
@@ -185,12 +189,12 @@ public class WebClient
 
         var content = new FormUrlEncodedContent(parameters);
 
-        var response = await _HttpClient.PostAsync("/identity/connect/token", content);
+        var response = await _HttpClient.PostAsync($"{_BaseUrl}/identity/connect/token", content);
         var responseAt = DateTime.UtcNow;
         response.EnsureSuccessStatusCode();
 
         _WebSession.UpdateSession(_Deserialize<RefreshModel>(await response.Content.ReadAsStreamAsync()));
-        ExpiresAt = responseAt.AddSeconds(-_WebSession.ExpiresIn - 300);
+        ExpiresAt = responseAt.AddSeconds(-_WebSession.ExpiresIn - AuthTokenExpirationThreshold);
 
         _HttpClient.DefaultRequestHeaders.Remove("Bearer");
         _HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _WebSession.AccessToken);
@@ -215,12 +219,12 @@ public class WebClient
 
         var content = new FormUrlEncodedContent(parameters);
 
-        var response = await _HttpClient.PostAsync("/identity/connect/token", content);
+        var response = await _HttpClient.PostAsync($"{_BaseUrl}/identity/connect/token", content);
         var responseAt = DateTime.UtcNow;
         response.EnsureSuccessStatusCode();
 
         _WebSession.UpdateSession(_Deserialize<ApiKeyLoginModel>(await response.Content.ReadAsStreamAsync()));
-        ExpiresAt = responseAt.AddSeconds(-_WebSession.ExpiresIn - 300);
+        ExpiresAt = responseAt.AddSeconds(-_WebSession.ExpiresIn - AuthTokenExpirationThreshold);
 
         _HttpClient.DefaultRequestHeaders.Remove("Bearer");
         _HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _WebSession.AccessToken);
@@ -403,17 +407,17 @@ public class WebClient
 
     public async Task<CipherItemModel> GetCipherItemAsync(Guid id)
     {
-        return await _GetAPIAsync<CipherItemModel>($"{CiphersApiPath}/{id}");
+        return await _GetAPIAsync<CipherItemModel>($"{_BaseUrl}{CiphersApiPath}/{id}");
     }
 
     public async Task<List<CipherItemModel>> GetCipherItemsAsync()
     {
-        return (await _GetAllAPIAsync<CipherItemModel>(CiphersApiPath)).Data;
+        return (await _GetAllAPIAsync<CipherItemModel>($"{_BaseUrl}{CiphersApiPath}")).Data;
     }
 
     public async Task<AttachmentModel> GetCipherItemAttachmentAsync(Guid id, string attachmentId)
     {
-        return await _GetAPIAsync<AttachmentModel>($"{CiphersApiPath}/{id}/attachment/{attachmentId}");
+        return await _GetAPIAsync<AttachmentModel>($"{_BaseUrl}{CiphersApiPath}/{id}/attachment/{attachmentId}");
     }
 
     public async Task<AttachmentModel> CreateCipherItemAttachmentAsync(Guid id, string encryptedFileName, string encryptedKey, Stream attachmentStream)
@@ -428,7 +432,7 @@ public class WebClient
 
         var content = _APIModelToContent(createAttachmentModel);
 
-        var response = await _HttpClient.PostAsync($"{CiphersApiPath}/{id}/attachment/v2", content);
+        var response = await _HttpClient.PostAsync($"{_BaseUrl}{CiphersApiPath}/{id}/attachment/v2", content);
         response.EnsureSuccessStatusCode();
         var newAttachment = _Deserialize<CreateCipherItemAttachmentResponseAPIResultModel>(await response.Content.ReadAsStreamAsync());
         try
@@ -440,7 +444,7 @@ public class WebClient
 
             form.Add(fileContent, "data", encryptedFileName);
 
-            response = await _HttpClient.PostAsync($"{CiphersApiPath}/{id}/attachment/{newAttachment.AttachmentId}", form);
+            response = await _HttpClient.PostAsync($"{_BaseUrl}{CiphersApiPath}/{id}/attachment/{newAttachment.AttachmentId}", form);
             response.EnsureSuccessStatusCode();
         }
         catch
@@ -461,17 +465,17 @@ public class WebClient
 
     public async Task DeleteCipherItemAttachmentAsync(Guid id, string attachmentId)
     {
-        await _DeleteAPIAsync($"{CiphersApiPath}/{id}/attachment/{attachmentId}");
+        await _DeleteAPIAsync($"{_BaseUrl}{CiphersApiPath}/{id}/attachment/{attachmentId}");
     }
 
     public async Task<CipherItemModel> CreateCipherItemAsync(CipherItemModel cipherItem)
     {
         switch (cipherItem.ItemType)
         {
-            case CipherItemType.Login: return await _CreateAPIAsync<CipherItemModel, CipherItemLoginRequestAPIModel>(CiphersApiPath, _BuildCipherItemLoginRequestAsync(cipherItem));
-            case CipherItemType.SecureNote: return await _CreateAPIAsync<CipherItemModel, CipherItemSecureNoteRequestAPIModel>(CiphersApiPath, _BuildCipherItemSecureNoteRequestAsync(cipherItem));
-            case CipherItemType.Card: return await _CreateAPIAsync<CipherItemModel, CipherItemCardRequestAPIModel>(CiphersApiPath, _BuildCipherItemCardRequestAsync(cipherItem));
-            case CipherItemType.Identity: return await _CreateAPIAsync<CipherItemModel, CipherItemIdentityRequestAPIModel>(CiphersApiPath, _BuildCipherItemIdentityRequestAsync(cipherItem));
+            case CipherItemType.Login     : return await _CreateAPIAsync<CipherItemModel, CipherItemLoginRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", _BuildCipherItemLoginRequestAsync(cipherItem));
+            case CipherItemType.SecureNote: return await _CreateAPIAsync<CipherItemModel, CipherItemSecureNoteRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", _BuildCipherItemSecureNoteRequestAsync(cipherItem));
+            case CipherItemType.Card      : return await _CreateAPIAsync<CipherItemModel, CipherItemCardRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", _BuildCipherItemCardRequestAsync(cipherItem));
+            case CipherItemType.Identity  : return await _CreateAPIAsync<CipherItemModel, CipherItemIdentityRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", _BuildCipherItemIdentityRequestAsync(cipherItem));
         }
 
         throw new InvalidDataException($"Unhandled cipher item type: {cipherItem.ItemType}");
@@ -481,10 +485,10 @@ public class WebClient
     {
         switch (cipherItem.ItemType)
         {
-            case CipherItemType.Login     : return await _UpdateAPIAsync<CipherItemModel, CipherItemLoginRequestAPIModel>(CiphersApiPath, id, _BuildCipherItemLoginRequestAsync(cipherItem));
-            case CipherItemType.SecureNote: return await _UpdateAPIAsync<CipherItemModel, CipherItemSecureNoteRequestAPIModel>(CiphersApiPath, id, _BuildCipherItemSecureNoteRequestAsync(cipherItem));
-            case CipherItemType.Card      : return await _UpdateAPIAsync<CipherItemModel, CipherItemCardRequestAPIModel>(CiphersApiPath, id, _BuildCipherItemCardRequestAsync(cipherItem));
-            case CipherItemType.Identity  : return await _UpdateAPIAsync<CipherItemModel, CipherItemIdentityRequestAPIModel>(CiphersApiPath, id, _BuildCipherItemIdentityRequestAsync(cipherItem));
+            case CipherItemType.Login     : return await _UpdateAPIAsync<CipherItemModel, CipherItemLoginRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", id, _BuildCipherItemLoginRequestAsync(cipherItem));
+            case CipherItemType.SecureNote: return await _UpdateAPIAsync<CipherItemModel, CipherItemSecureNoteRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", id, _BuildCipherItemSecureNoteRequestAsync(cipherItem));
+            case CipherItemType.Card      : return await _UpdateAPIAsync<CipherItemModel, CipherItemCardRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", id, _BuildCipherItemCardRequestAsync(cipherItem));
+            case CipherItemType.Identity  : return await _UpdateAPIAsync<CipherItemModel, CipherItemIdentityRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", id, _BuildCipherItemIdentityRequestAsync(cipherItem));
         }
 
         throw new InvalidDataException($"Unhandled cipher item type: {cipherItem.ItemType}");
@@ -492,7 +496,7 @@ public class WebClient
 
     public async Task DeleteCipherItemAsync(Guid id)
     {
-        await _DeleteAPIAsync($"{CiphersApiPath}/{id}");
+        await _DeleteAPIAsync($"{_BaseUrl}{CiphersApiPath}/{id}");
     }
 
     public async Task DeleteCipherItemsAsync(IEnumerable<Guid> ids)
@@ -516,37 +520,37 @@ public class WebClient
 
     public async Task<FolderItemModel> GetFolderAsync(Guid id)
     {
-        return await _GetAPIAsync<FolderItemModel>($"{FoldersApiPath}/{id}");
+        return await _GetAPIAsync<FolderItemModel>($"{_BaseUrl}{FoldersApiPath}/{id}");
     }
 
     public async Task<List<FolderItemModel>> GetFoldersAsync()
     {
-        return (await _GetAllAPIAsync<FolderItemModel>(FoldersApiPath)).Data;
+        return (await _GetAllAPIAsync<FolderItemModel>($"{_BaseUrl}{FoldersApiPath}")).Data;
     }
 
     public async Task<FolderItemModel> CreateFolderAsync(string encryptedName)
     {
-        return await _CreateAPIAsync<FolderItemModel, FolderRequestAPIModel>(FoldersApiPath, _BuildFolderRequestAPIModel(encryptedName));
+        return await _CreateAPIAsync<FolderItemModel, FolderRequestAPIModel>($"{_BaseUrl}{FoldersApiPath}", _BuildFolderRequestAPIModel(encryptedName));
     }
 
     public async Task<FolderItemModel> UpdateFolderAsync(Guid id, string encryptedName)
     {
-        return await _UpdateAPIAsync<FolderItemModel, FolderRequestAPIModel>(FoldersApiPath, id, _BuildFolderRequestAPIModel(encryptedName));
+        return await _UpdateAPIAsync<FolderItemModel, FolderRequestAPIModel>($"{_BaseUrl}{FoldersApiPath}", id, _BuildFolderRequestAPIModel(encryptedName));
     }
 
     public async Task DeleteFolderAsync(Guid id)
     {
-        await _DeleteAPIAsync($"{FoldersApiPath}/{id}");
+        await _DeleteAPIAsync($"{_BaseUrl}{FoldersApiPath}/{id}");
     }
 
     public async Task DeleteFoldersAsync(IEnumerable<Guid> ids)
     {
-        await _MultiDeleteAPIAsync(FoldersApiPath, ids);
+        await _MultiDeleteAPIAsync($"{_BaseUrl}{FoldersApiPath}", ids);
     }
 
     public async Task DeleteAllFolderAsync()
     {
-        var response = await _HttpClient.DeleteAsync($"/api/folders/all");
+        var response = await _HttpClient.DeleteAsync($"{_BaseUrl}/api/folders/all");
         response.EnsureSuccessStatusCode();
     }
 
@@ -563,12 +567,12 @@ public class WebClient
 
     public async Task<ProfileItemModel> GetAccountProfileAsync()
     {
-        return await _GetAPIAsync<ProfileItemModel>("/api/accounts/profile");
+        return await _GetAPIAsync<ProfileItemModel>($"{_BaseUrl}/api/accounts/profile");
     }
 
     public async Task<DatabaseModel> GetDatabaseAsync(bool excludeDomains = true)
     {
         var strBool = excludeDomains ? "true" : "false"; // Because bool.ToString() is CamelCase
-        return await _GetAPIAsync<DatabaseModel>($"/api/sync?excludeDomains={strBool}");
+        return await _GetAPIAsync<DatabaseModel>($"{_BaseUrl}/api/sync?excludeDomains={strBool}");
     }
 }

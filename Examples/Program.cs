@@ -56,10 +56,21 @@ class Example
             Console.WriteLine($"  {name}: (null)");
     }
 
+    static void PrintLoginUri(UriModel uri)
+    {
+        Console.WriteLine("  Login Uri:");
+        PrintCipherField(uri.Uri, "  Uri");
+        PrintCipherField(uri.UriChecksum, "  UriChecksum");
+        PrintField(uri.Match?.ToString() ?? string.Empty, "  Match");
+    }
+
     static void PrintLoginField(LoginFieldModel model)
     {
         PrintCipherField(model.Username);
         PrintCipherField(model.Password);
+
+        foreach (var uri in model.Uris)
+            PrintLoginUri(uri);
     }
 
     static void PrintIdentityField(IdentityFieldModel model)
@@ -174,7 +185,7 @@ class Example
         
         Console.WriteLine("================================");
         Console.WriteLine($"Item: {folder}/{item.Id}");
-        
+
         PrintField(item.FolderId?.ToString(), "FolderId");
         PrintField(item.OrganizationId?.ToString(), "OrganizationId");
         PrintCipherField(item.Name);

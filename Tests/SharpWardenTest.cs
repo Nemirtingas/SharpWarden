@@ -1,6 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
+using SharpWarden;
 using SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
 using SharpWarden.BitWardenDatabaseSession.Services;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace Tests;
@@ -263,5 +265,109 @@ public sealed class SharpWardenTest
         Assert.AreEqual(item.Login.Username.ClearString, "OrganizationUsername");
         Assert.AreEqual(item.Login.Password.ClearString, "OrganizationPassword");
         Assert.AreEqual(item.Login.TOTP.ClearString, "OrganizationAuthenticatorKey");
+    }
+
+    [TestMethod]
+    public async Task _3001_TestUserCreateLoginItemAsync()
+    {
+        // TODO: Test for item existence before creating to not leave dangling tests
+
+        var cipherItem = new CipherItemModel(UserCryptoService)
+        {
+            Name = new EncryptedString(UserCryptoService)
+            {
+                ClearString = "TestCreateUserLoginItem"
+            },
+            Favorite = true,
+            Edit = true,
+            Reprompt = CipherRepromptType.Password,
+            FolderId = Guid.Parse(TestUserFolderId),
+            Notes = new EncryptedString(UserCryptoService)
+            {
+                ClearString = "TestCreateUserNotes"
+            },
+            ViewPassword = true,
+        };
+
+        var loginItem = cipherItem.CreateLogin();
+        loginItem.Username = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserLoginItemUsername"
+        };
+        loginItem.Password = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserLoginItemPassword"
+        };
+        loginItem.TOTP = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserLoginItemTOTP"
+        };
+
+        var cipherItemSaved = await VaultWebClient.CreateCipherItemAsync(cipherItem);
+        Assert.IsNotNull(cipherItemSaved?.Id);
+        Assert.AreEqual(cipherItemSaved.Name.ClearString, cipherItem.Name.ClearString);
+        Assert.AreEqual(cipherItemSaved.Name.CipherString, cipherItem.Name.CipherString);
+
+        Assert.AreEqual(cipherItemSaved.Notes.ClearString, cipherItem.Notes.ClearString);
+        Assert.AreEqual(cipherItemSaved.Notes.CipherString, cipherItem.Notes.CipherString);
+
+        Assert.AreEqual(cipherItemSaved.Favorite, cipherItem.Favorite);
+        Assert.AreEqual(cipherItemSaved.Edit, cipherItem.Edit);
+        Assert.AreEqual(cipherItemSaved.Reprompt, cipherItem.Reprompt);
+        Assert.AreEqual(cipherItemSaved.FolderId, cipherItem.FolderId);
+        Assert.AreEqual(cipherItemSaved.ViewPassword, cipherItem.ViewPassword);
+
+        Assert.AreEqual(cipherItemSaved.Login.Username.ClearString, cipherItem.Login.Username.ClearString);
+        Assert.AreEqual(cipherItemSaved.Login.Username.CipherString, cipherItem.Login.Username.CipherString);
+
+        Assert.AreEqual(cipherItemSaved.Login.Password.ClearString, cipherItem.Login.Password.ClearString);
+        Assert.AreEqual(cipherItemSaved.Login.Password.CipherString, cipherItem.Login.Password.CipherString);
+
+        Assert.AreEqual(cipherItemSaved.Login.TOTP.ClearString, cipherItem.Login.TOTP.ClearString);
+        Assert.AreEqual(cipherItemSaved.Login.TOTP.CipherString, cipherItem.Login.TOTP.CipherString);
+
+        await VaultWebClient.DeleteCipherItemAsync(cipherItemSaved.Id.Value);
+    }
+
+    [TestMethod]
+    public async Task _3006_TestUserCreateFolderItemAsync()
+    {
+        // TODO: Test for item existence before creating to not leave dangling tests
+
+        var cryptString = new EncryptedString(UserCryptoService);
+        cryptString.ClearString = "TestDirectory";
+
+        var folder = await VaultWebClient.CreateFolderAsync(cryptString.CipherString);
+        Assert.IsNotNull(folder?.Id);
+        Assert.AreEqual(folder.Name.CipherString, cryptString.CipherString);
+        Assert.AreEqual(folder.Name.ClearString, cryptString.ClearString);
+        var folderId = folder.Id.Value;
+
+        cryptString.ClearString = "Renamed TestDirectory";
+        folder = await VaultWebClient.UpdateFolderAsync(folder.Id.Value, cryptString.CipherString);
+        Assert.IsNotNull(folder?.Id);
+        Assert.AreEqual(folder?.Id, folderId);
+        Assert.AreEqual(folder.Name.CipherString, cryptString.CipherString);
+        Assert.AreEqual(folder.Name.ClearString, cryptString.ClearString);
+
+        var folders = await VaultWebClient.GetFoldersAsync();
+        var foundFolder = folders.Find(e => e.Id == folderId);
+        Assert.IsNotNull(foundFolder);
+        Assert.AreEqual(foundFolder.Name.ClearString, cryptString.ClearString);
+
+        folder = await VaultWebClient.GetFolderAsync(folder.Id.Value);
+        Assert.IsNotNull(folder?.Id);
+        Assert.AreEqual(folder?.Id, foundFolder.Id);
+
+        await VaultWebClient.DeleteFolderAsync(folder.Id.Value);
+
+        try
+        {
+            folder = await VaultWebClient.GetFolderAsync(folder.Id.Value);
+            Assert.IsNull("GetFolderAsync with an inexistant ID should throw!");
+        }
+        catch (Exception)
+        {
+        }
     }
 }
