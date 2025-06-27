@@ -7,6 +7,8 @@ Currently allows you to:
 - create/update/delete items
 - create/update/delete folders
 - create/delete attachments
+- use the client web api
+- listen to notifications
 
 It supports encrypting/decrypting from a user and organizations entries.
 
@@ -14,5 +16,4 @@ TODO:
 
 A lot of stuff are in my mind, but I'd like to implement:
 
-- Login via api key.
 - ...
