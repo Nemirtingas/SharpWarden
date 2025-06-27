@@ -32,16 +32,16 @@ public class ApiKeyLoginModel
     public bool ResetMasterPassword { get; set; }
 
     [JsonProperty("Kdf")]
-    public int Kdf { get; set; }
+    public KdfType Kdf { get; set; }
 
     [JsonProperty("KdfIterations")]
     public int KdfIterations { get; set; }
 
-    //[JsonProperty("KdfMemory")]
-    //public object KdfMemory { get; set; }
+    [JsonProperty("KdfMemory")]
+    public int? KdfMemory { get; set; }
 
-    //[JsonProperty("KdfParallelism")]
-    //public object KdfParallelism { get; set; }
+    [JsonProperty("KdfParallelism")]
+    public int? KdfParallelism { get; set; }
 
     //[JsonProperty("UserDecryptionOptions")]
     //public object UserDecryptionOptions { get; set; }

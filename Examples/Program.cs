@@ -7,12 +7,17 @@ using SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
 using SharpWarden.BitWardenDatabaseSession.Models.CollectionItem;
 using SharpWarden.BitWardenDatabaseSession.Models.FolderItem;
 using SharpWarden.BitWardenDatabaseSession.Services;
+using SharpWarden.NotificationClient;
+using SharpWarden.NotificationClient.Models;
+using SharpWarden.NotificationClient.Services;
+using SharpWarden.WebClient.Services;
 namespace SharpWardenExamples;
 
 class Example
 {
     static IServiceScope BitWardenDatabaseSessionScope;
-    static SharpWarden.WebClient.WebClient VaultWebClient;
+    static IWebClientService VaultWebClient;
+    static INotificationClientService NotificationClient;
     static IVaultService VaultService;
     static IUserCryptoService UserCryptoService;
 
@@ -282,10 +287,8 @@ class Example
         return Task.FromResult(Console.ReadLine().Trim());
     }
 
-    static async Task LoadOnlineDatabaseAsync(string email, string password, string refreshToken)
+    static async Task LoadOnlineDatabaseAsync(string masterPassword, string refreshToken)
     {
-        await VaultWebClient.AuthenticateWithApiKeyAsync(email, password);
-
         // Authenticating with credentials triggers a mail notification and probably an OTP request.
         //await VaultWebClient.PreloginAsync(email);
         //await VaultWebClient.AuthenticateAsync(password, WaitForUserOTPAsync);
@@ -293,7 +296,7 @@ class Example
         //await VaultWebClient.AuthenticateWithRefreshTokenAsync(refreshToken);
 
         VaultService.LoadBitWardenDatabase(
-            Encoding.UTF8.GetBytes(password),
+            Encoding.UTF8.GetBytes(masterPassword),
             VaultWebClient.UserKdfIterations,
             await VaultWebClient.GetDatabaseAsync());
     }
@@ -309,21 +312,39 @@ class Example
         }
     }
 
+    static async Task OnPushNotificationAsyncReceived(PushNotificationBaseModel message)
+    {
+        
+    }
+
     static async Task MainAsync()
     {
-        using (BitWardenDatabaseSessionScope = BitWardenHelper.CreateSessionScope(SharpWarden.WebClient.WebClient.BitWardenEUHostUrl))
+        using (BitWardenDatabaseSessionScope = BitWardenHelper.CreateSessionScope(IWebClientService.BitWardenEUHostUrl, INotificationClientService.BitWardenEUHostUrl))
         {
-            VaultWebClient = BitWardenDatabaseSessionScope.ServiceProvider.GetRequiredService<SharpWarden.WebClient.WebClient>();
+            var cts = new CancellationTokenSource();
+
+            VaultWebClient = BitWardenDatabaseSessionScope.ServiceProvider.GetRequiredService<IWebClientService>();
             VaultService = BitWardenDatabaseSessionScope.ServiceProvider.GetRequiredService<IVaultService>();
             UserCryptoService = BitWardenDatabaseSessionScope.ServiceProvider.GetRequiredService<IUserCryptoService>();
 
-            await LoadOnlineDatabaseAsync(Environment.GetEnvironmentVariable("SharpWardenMail"), Environment.GetEnvironmentVariable("SharpWardenPassword"), null);
+            await VaultWebClient.AuthenticateWithApiKeyAsync(Environment.GetEnvironmentVariable("SharpWardenUser"), Environment.GetEnvironmentVariable("SharpWardenSecret"));
+            // Build NotificationClient after login
+            NotificationClient = BitWardenDatabaseSessionScope.ServiceProvider.GetRequiredService<INotificationClientService>();
+            await NotificationClient.StartAsync(cts.Token);
+
+            NotificationClient.OnPushNotificationAsyncReceived += OnPushNotificationAsyncReceived;
+
+            await LoadOnlineDatabaseAsync(Environment.GetEnvironmentVariable("SharpWardenMasterPassword"), null);
             //await LoadLocalDatabaseAsync(credentials[1]);
 
             await TestFolderAsync();
             await TestCipherItemAsync();
 
-            PrintCipherItems();
+            //PrintCipherItems();
+
+            cts.Cancel();
+
+            await Task.Delay(5000);
         }
     }
 }

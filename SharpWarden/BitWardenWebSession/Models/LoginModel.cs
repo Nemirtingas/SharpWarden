@@ -8,16 +8,16 @@ public class LoginModel
     public bool ForcePasswordReset { get; set; }
 
     [JsonProperty("Kdf")]
-    public int Kdf { get; set; }
+    public KdfType Kdf { get; set; }
 
     [JsonProperty("KdfIterations")]
     public int KdfIterations { get; set; }
 
-    //[JsonProperty("KdfMemory")]
-    //public object KdfMemory { get; set; }
+    [JsonProperty("KdfMemory")]
+    public int? KdfMemory { get; set; }
 
-    //[JsonProperty("KdfParallelism")]
-    //public object KdfParallelism { get; set; }
+    [JsonProperty("KdfParallelism")]
+    public int? KdfParallelism { get; set; }
 
     [JsonProperty("Key")]
     public string Key { get; set; }
@@ -64,8 +64,8 @@ public class LoginModel
         {
             ForcePasswordReset = ForcePasswordReset,
             KdfIterations = KdfIterations,
-            //KdfMemory = KdfMemory,
-            //KdfParallelism = KdfParallelism,
+            KdfMemory = KdfMemory,
+            KdfParallelism = KdfParallelism,
             Key = Key,
             PrivateKey = PrivateKey,
             ResetMasterPassword = ResetMasterPassword,
@@ -91,6 +91,8 @@ public class LoginModel
         ExpiresIn = apiKeyLoginModel.ExpiresIn;
         Kdf = apiKeyLoginModel.Kdf;
         KdfIterations = apiKeyLoginModel.KdfIterations;
+        KdfMemory = apiKeyLoginModel.KdfMemory;
+        KdfParallelism = apiKeyLoginModel.KdfParallelism;
         Key = apiKeyLoginModel.Key;
         PrivateKey = apiKeyLoginModel.PrivateKey;
         ForcePasswordReset = apiKeyLoginModel.ForcePasswordReset;
