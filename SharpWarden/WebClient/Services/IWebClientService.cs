@@ -45,7 +45,7 @@ public interface IWebClientService
 
     public Task<CipherItemModel> CreateCipherItemAsync(CipherItemModel cipherItem);
 
-    public Task<CipherItemModel> UpdateCipherItemAsync<T>(Guid id, CipherItemModel cipherItem);
+    public Task<CipherItemModel> UpdateCipherItemAsync(Guid id, CipherItemModel cipherItem);
 
     public Task DeleteCipherItemAsync(Guid id);
 

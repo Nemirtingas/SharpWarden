@@ -13,7 +13,7 @@ using SharpWarden.WebClient.Exceptions;
 
 namespace SharpWarden.WebClient.Services;
 
-public class DefaultWebClientService : IWebClientService
+public class DefaultWebClientService : IWebClientService, IDisposable
 {
     private Guid _Guid;
     private string _DeviceVersion;
@@ -474,7 +474,7 @@ public class DefaultWebClientService : IWebClientService
         throw new InvalidDataException($"Unhandled cipher item type: {cipherItem.ItemType}");
     }
 
-    public async Task<CipherItemModel> UpdateCipherItemAsync<T>(Guid id, CipherItemModel cipherItem)
+    public async Task<CipherItemModel> UpdateCipherItemAsync(Guid id, CipherItemModel cipherItem)
     {
         switch (cipherItem.ItemType)
         {
@@ -567,5 +567,10 @@ public class DefaultWebClientService : IWebClientService
     {
         var strBool = excludeDomains ? "true" : "false"; // Because bool.ToString() is CamelCase
         return await _GetAPIAsync<DatabaseModel>($"{_BaseUrl}/api/sync?excludeDomains={strBool}");
+    }
+
+    public void Dispose()
+    {
+        _HttpClient.Dispose();
     }
 }
