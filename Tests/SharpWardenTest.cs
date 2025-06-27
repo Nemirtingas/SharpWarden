@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpWarden;
 using SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
 using SharpWarden.BitWardenDatabaseSession.Services;
+using SharpWarden.WebClient.Services;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -24,7 +25,7 @@ public sealed class SharpWardenTest
     const string TestOrganizationItemId = "2c94bf3f-fcfe-48eb-b19c-b307006b69be";
 
     private static IServiceScope DatabaseSessionScope;
-    private static SharpWarden.WebClient.WebClient VaultWebClient;
+    private static IWebClientService VaultWebClient;
     private static IVaultService VaultService;
     private static IUserCryptoService UserCryptoService;
     private static string TestAccountUser;
@@ -34,8 +35,8 @@ public sealed class SharpWardenTest
 
     static SharpWardenTest()
     {
-        DatabaseSessionScope = SharpWarden.BitWardenHelper.CreateSessionScope(SharpWarden.WebClient.WebClient.BitWardenEUHostUrl);
-        VaultWebClient = DatabaseSessionScope.ServiceProvider.GetRequiredService<SharpWarden.WebClient.WebClient>();
+        DatabaseSessionScope = SharpWarden.BitWardenHelper.CreateSessionScope(IWebClientService.BitWardenEUHostUrl);
+        VaultWebClient = DatabaseSessionScope.ServiceProvider.GetRequiredService<IWebClientService>();
         VaultService = DatabaseSessionScope.ServiceProvider.GetRequiredService<IVaultService>();
         UserCryptoService = DatabaseSessionScope.ServiceProvider.GetRequiredService<IUserCryptoService>();
         TestAccountUser = Environment.GetEnvironmentVariable("SHARP_WARDEN_TEST_ACCOUNT_USER");

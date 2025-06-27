@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpWarden.BitWardenDatabaseSession.Services;
+using SharpWarden.WebClient.Services;
 
 namespace SharpWarden;
 
@@ -14,7 +15,10 @@ public static class BitWardenHelper
         services.AddScoped<ICryptoService, DefaultCryptoService>();
         services.AddScoped<IUserCryptoService, UserCryptoService>();
         services.AddScoped<IVaultService, DefaultVaultService>();
-        services.AddScoped((services) => new WebClient.WebClient(services.GetRequiredService<ISessionJsonConverterService>(), hostBase, null));
+        services.AddScoped<IWebClientService, DefaultWebClientService>((services) =>
+        {
+            return new DefaultWebClientService(services.GetRequiredService<ISessionJsonConverterService>(), hostBase, null, webClientId);
+        });
 
         return services.BuildServiceProvider().CreateScope();
     }

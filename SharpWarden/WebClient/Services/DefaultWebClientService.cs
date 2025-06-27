@@ -11,9 +11,9 @@ using SharpWarden.BitWardenDatabaseSession;
 using SharpWarden.BitWardenDatabaseSession.Services;
 using SharpWarden.WebClient.Exceptions;
 
-namespace SharpWarden.WebClient;
+namespace SharpWarden.WebClient.Services;
 
-public class WebClient
+public class DefaultWebClientService : IWebClientService
 {
     private Guid _Guid;
     private string _DeviceVersion;
@@ -25,13 +25,6 @@ public class WebClient
 
     private const int AuthTokenExpirationThreshold = 60;
 
-    public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
-    public const string SSHKeyCipherMinimumVersion = "2024.12.0";
-    public const string DenyLegacyUserMinimumVersion = "2025.6.0";
-
-    public const string BitWardenComHostUrl = "https://vault.bitwarden.com";
-    public const string BitWardenEUHostUrl = "https://vault.bitwarden.eu";
-
     /// <summary>
     /// If <paramref name="deviceVersion"/> is not at least <see cref="SSHKeyCipherMinimumVersion"/>, ssh keys will not be returned by <see cref="GetDatabaseAsync"/>.
     /// </summary>
@@ -39,7 +32,7 @@ public class WebClient
     /// <param name="bitwardenHostUrl"></param>
     /// <param name="deviceVersion"></param>
     /// <param name="deviceId"></param>
-    public WebClient(
+    public DefaultWebClientService(
         ISessionJsonConverterService jsonSerializer,
         string bitwardenHostUrl,
         string deviceVersion,
@@ -47,10 +40,10 @@ public class WebClient
     {
         _JsonSerializer = jsonSerializer;
         _Guid = deviceId ?? Guid.NewGuid();
-        _DeviceVersion = string.IsNullOrWhiteSpace(deviceVersion) ? DenyLegacyUserMinimumVersion : deviceVersion;
+        _DeviceVersion = string.IsNullOrWhiteSpace(deviceVersion) ? IWebClientService.DenyLegacyUserMinimumVersion : deviceVersion;
         _WebSession = new LoginModel();
         _HttpClient = new HttpClient();
-        _BaseUrl = bitwardenHostUrl.EndsWith('/') ? bitwardenHostUrl.Remove(bitwardenHostUrl.Length-1) : bitwardenHostUrl;
+        _BaseUrl = bitwardenHostUrl.TrimEnd('/');
         _HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0");
         _HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("device-type", $"{(int)DeviceType.Sdk}");
         _HttpClient.DefaultRequestHeaders.TryAddWithoutValidation("Bitwarden-Client-Name", "web");
