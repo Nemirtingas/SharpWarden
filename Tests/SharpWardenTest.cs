@@ -1,9 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpWarden;
 using SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
+using SharpWarden.BitWardenDatabaseSession.Models.FolderItem;
 using SharpWarden.BitWardenDatabaseSession.Services;
+using SharpWarden.NotificationClient;
+using SharpWarden.NotificationClient.Models;
+using SharpWarden.NotificationClient.Services;
 using SharpWarden.WebClient.Services;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace Tests;
@@ -35,7 +38,7 @@ public sealed class SharpWardenTest
 
     static SharpWardenTest()
     {
-        DatabaseSessionScope = SharpWarden.BitWardenHelper.CreateSessionScope(IWebClientService.BitWardenEUHostUrl);
+        DatabaseSessionScope = SharpWarden.BitWardenHelper.CreateSessionScope(IWebClientService.BitWardenEUHostUrl, INotificationClientService.BitWardenEUHostUrl);
         VaultWebClient = DatabaseSessionScope.ServiceProvider.GetRequiredService<IWebClientService>();
         VaultService = DatabaseSessionScope.ServiceProvider.GetRequiredService<IVaultService>();
         UserCryptoService = DatabaseSessionScope.ServiceProvider.GetRequiredService<IUserCryptoService>();
@@ -370,5 +373,103 @@ public sealed class SharpWardenTest
         catch (Exception)
         {
         }
+    }
+
+    [TestMethod]
+    public async Task _4001_TestNotificationAsync()
+    {
+        var notificationClient = DatabaseSessionScope.ServiceProvider.GetRequiredService<INotificationClientService>();
+        var cts = new CancellationTokenSource();
+
+        var encryptedString = new EncryptedString(UserCryptoService);
+
+        var notificationMessage = default(PushNotificationBaseModel);
+        var conditionVar = new object();
+
+        // Need to wait, BitWarden's notification Hub is SLOW, so it can grab our previous tests notifications.
+        await Task.Delay(20000);
+
+        await notificationClient.StartAsync(cts.Token);
+        notificationClient.OnPushNotificationAsyncReceived += message =>
+        {
+            lock (conditionVar)
+            {
+                notificationMessage = message;
+                Monitor.Pulse(conditionVar);
+                return Task.CompletedTask;
+            }
+        };
+
+        var cipherItem = new CipherItemModel(UserCryptoService)
+        {
+            Name = new EncryptedString(UserCryptoService)
+            {
+                ClearString = "TestNotificationCipherItem"
+            }
+        };
+        var cipherLoginItem = cipherItem.CreateLogin();
+
+        lock (conditionVar)
+        {
+            cipherItem = VaultWebClient.CreateCipherItemAsync(cipherItem).GetAwaiter().GetResult();
+            Monitor.Wait(conditionVar);
+        }
+        Assert.AreEqual(notificationMessage.Type, PushNotificationType.SyncCipherCreate);
+        Assert.AreEqual(notificationMessage.Payload.GetType(), typeof(SyncCipherPushNotificationModel));
+        Assert.AreEqual(cipherItem.Id, (notificationMessage.Payload as SyncCipherPushNotificationModel).Id);
+
+        lock (conditionVar)
+        {
+            cipherItem.Login.Username = new EncryptedString(UserCryptoService)
+            {
+                ClearString = "UserNameUpdate"
+            };
+            cipherItem = VaultWebClient.UpdateCipherItemAsync(cipherItem.Id.Value, cipherItem).GetAwaiter().GetResult();
+            Monitor.Wait(conditionVar);
+        }
+        Assert.AreEqual(notificationMessage.Type, PushNotificationType.SyncCipherUpdate);
+        Assert.AreEqual(notificationMessage.Payload.GetType(), typeof(SyncCipherPushNotificationModel));
+        Assert.AreEqual(cipherItem.Id, (notificationMessage.Payload as SyncCipherPushNotificationModel).Id);
+
+        lock (conditionVar)
+        {
+            VaultWebClient.DeleteCipherItemAsync(cipherItem.Id.Value).GetAwaiter().GetResult();
+            Monitor.Wait(conditionVar);
+        }
+        Assert.AreEqual(notificationMessage.Type, PushNotificationType.SyncLoginDelete);
+        Assert.AreEqual(notificationMessage.Payload.GetType(), typeof(SyncCipherPushNotificationModel));
+        Assert.AreEqual(cipherItem.Id, (notificationMessage.Payload as SyncCipherPushNotificationModel).Id);
+
+        var folder = default(FolderItemModel);
+        lock (conditionVar)
+        {
+            encryptedString.ClearString = "TestNotificationFolder";
+            folder = VaultWebClient.CreateFolderAsync(encryptedString.CipherString).GetAwaiter().GetResult();
+            Monitor.Wait(conditionVar);
+        }
+        Assert.AreEqual(notificationMessage.Type, PushNotificationType.SyncFolderCreate);
+        Assert.AreEqual(notificationMessage.Payload.GetType(), typeof(SyncFolderPushNotificationModel));
+        Assert.AreEqual(folder.Id, (notificationMessage.Payload as SyncFolderPushNotificationModel).Id);
+
+        lock (conditionVar)
+        {
+            encryptedString.ClearString = "TestNotificationFolderNewName";
+            folder = VaultWebClient.UpdateFolderAsync(folder.Id.Value, encryptedString.CipherString).GetAwaiter().GetResult();
+            Monitor.Wait(conditionVar);
+        }
+        Assert.AreEqual(notificationMessage.Type, PushNotificationType.SyncFolderUpdate);
+        Assert.AreEqual(notificationMessage.Payload.GetType(), typeof(SyncFolderPushNotificationModel));
+        Assert.AreEqual(folder.Id, (notificationMessage.Payload as SyncFolderPushNotificationModel).Id);
+
+        lock (conditionVar)
+        {
+            VaultWebClient.DeleteFolderAsync(folder.Id.Value).GetAwaiter().GetResult();
+            Monitor.Wait(conditionVar);
+        }
+        Assert.AreEqual(notificationMessage.Type, PushNotificationType.SyncFolderDelete);
+        Assert.AreEqual(notificationMessage.Payload.GetType(), typeof(SyncFolderPushNotificationModel));
+        Assert.AreEqual(folder.Id, (notificationMessage.Payload as SyncFolderPushNotificationModel).Id);
+
+        await notificationClient.StopAsync();
     }
 }

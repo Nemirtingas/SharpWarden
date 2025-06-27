@@ -6,7 +6,7 @@ using SharpWarden.NotificationClient.Models;
 
 namespace SharpWarden.NotificationClient.Services;
 
-public class DefaultNotificationClientService : INotificationClientService
+public class DefaultNotificationClientService : INotificationClientService, IDisposable
 {
     private readonly string _BaseUrl;
     private readonly string _AccessToken;
@@ -136,10 +136,26 @@ public class DefaultNotificationClientService : INotificationClientService
 
     public async Task StopAsync()
     {
+        ResetEventSubscribers();
         if (_hubConnection != null)
         {
             await _hubConnection.StopAsync();
             await _hubConnection.DisposeAsync();
+        }
+    }
+
+    public void ResetEventSubscribers()
+    {
+        OnPushNotificationAsyncReceived = null;
+    }
+
+    public void Dispose()
+    {
+        ResetEventSubscribers();
+        if (_hubConnection != null)
+        {
+            _hubConnection.StopAsync().GetAwaiter().GetResult();
+            _hubConnection.DisposeAsync().GetAwaiter().GetResult();
         }
     }
 }
