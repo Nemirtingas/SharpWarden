@@ -334,6 +334,338 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
+    public async Task _3002_TestUserCreateSecureNoteItemAsync()
+    {
+        // TODO: Test for item existence before creating to not leave dangling tests
+
+        var cipherItem = new CipherItemModel(UserCryptoService)
+        {
+            Name = new EncryptedString(UserCryptoService)
+            {
+                ClearString = "TestCreateUserSecureNoteItem"
+            },
+            Favorite = true,
+            Edit = true,
+            Reprompt = CipherRepromptType.Password,
+            FolderId = Guid.Parse(TestUserFolderId),
+            Notes = new EncryptedString(UserCryptoService)
+            {
+                ClearString = "TestCreateUserNotes"
+            },
+            ViewPassword = true,
+        };
+
+        var secureNoteItem = cipherItem.CreateSecureNote();
+        secureNoteItem.Type = SecureNoteType.Generic;
+
+        var cipherItemSaved = await VaultWebClient.CreateCipherItemAsync(cipherItem);
+        Assert.IsNotNull(cipherItemSaved?.Id);
+        Assert.AreEqual(cipherItemSaved.Name.ClearString, cipherItem.Name.ClearString);
+        Assert.AreEqual(cipherItemSaved.Name.CipherString, cipherItem.Name.CipherString);
+
+        Assert.AreEqual(cipherItemSaved.Notes.ClearString, cipherItem.Notes.ClearString);
+        Assert.AreEqual(cipherItemSaved.Notes.CipherString, cipherItem.Notes.CipherString);
+
+        Assert.AreEqual(cipherItemSaved.Favorite, cipherItem.Favorite);
+        Assert.AreEqual(cipherItemSaved.Edit, cipherItem.Edit);
+        Assert.AreEqual(cipherItemSaved.Reprompt, cipherItem.Reprompt);
+        Assert.AreEqual(cipherItemSaved.FolderId, cipherItem.FolderId);
+        Assert.AreEqual(cipherItemSaved.ViewPassword, cipherItem.ViewPassword);
+
+        Assert.AreEqual(cipherItemSaved.SecureNote.Type, cipherItem.SecureNote.Type);
+
+        await VaultWebClient.DeleteCipherItemAsync(cipherItemSaved.Id.Value);
+    }
+
+    [TestMethod]
+    public async Task _3003_TestUserCreateCardItemAsync()
+    {
+        // TODO: Test for item existence before creating to not leave dangling tests
+
+        var cipherItem = new CipherItemModel(UserCryptoService)
+        {
+            Name = new EncryptedString(UserCryptoService)
+            {
+                ClearString = "TestCreateUserCardItem"
+            },
+            Favorite = true,
+            Edit = true,
+            Reprompt = CipherRepromptType.Password,
+            FolderId = Guid.Parse(TestUserFolderId),
+            Notes = new EncryptedString(UserCryptoService)
+            {
+                ClearString = "TestCreateUserNotes"
+            },
+            ViewPassword = true,
+        };
+
+        var cardItem = cipherItem.CreateCard();
+        cardItem.Brand = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserCardItemBrand"
+        };
+        cardItem.ExpMonth = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserCardItemExpMonth"
+        };
+        cardItem.Number = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserCardItemNumber"
+        };
+        cardItem.CardholderName = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserCardItemCardholderName"
+        };
+        cardItem.Code = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserCardItemCode"
+        };
+        cardItem.ExpYear = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserCardItemExpYear"
+        };
+
+        var cipherItemSaved = await VaultWebClient.CreateCipherItemAsync(cipherItem);
+        Assert.IsNotNull(cipherItemSaved?.Id);
+        Assert.AreEqual(cipherItemSaved.Name.ClearString, cipherItem.Name.ClearString);
+        Assert.AreEqual(cipherItemSaved.Name.CipherString, cipherItem.Name.CipherString);
+
+        Assert.AreEqual(cipherItemSaved.Notes.ClearString, cipherItem.Notes.ClearString);
+        Assert.AreEqual(cipherItemSaved.Notes.CipherString, cipherItem.Notes.CipherString);
+
+        Assert.AreEqual(cipherItemSaved.Favorite, cipherItem.Favorite);
+        Assert.AreEqual(cipherItemSaved.Edit, cipherItem.Edit);
+        Assert.AreEqual(cipherItemSaved.Reprompt, cipherItem.Reprompt);
+        Assert.AreEqual(cipherItemSaved.FolderId, cipherItem.FolderId);
+        Assert.AreEqual(cipherItemSaved.ViewPassword, cipherItem.ViewPassword);
+
+        Assert.AreEqual(cipherItemSaved.Card.Brand.ClearString         , cipherItem.Card.Brand.ClearString         );
+        Assert.AreEqual(cipherItemSaved.Card.ExpMonth.ClearString      , cipherItem.Card.ExpMonth.ClearString      );
+        Assert.AreEqual(cipherItemSaved.Card.Number.ClearString        , cipherItem.Card.Number.ClearString        );
+        Assert.AreEqual(cipherItemSaved.Card.CardholderName.ClearString, cipherItem.Card.CardholderName.ClearString);
+        Assert.AreEqual(cipherItemSaved.Card.Code.ClearString          , cipherItem.Card.Code.ClearString          );
+        Assert.AreEqual(cipherItemSaved.Card.ExpYear.ClearString       , cipherItem.Card.ExpYear.ClearString       );
+
+        Assert.AreEqual(cipherItemSaved.Card.Brand.CipherString         , cipherItem.Card.Brand.CipherString         );
+        Assert.AreEqual(cipherItemSaved.Card.ExpMonth.CipherString      , cipherItem.Card.ExpMonth.CipherString      );
+        Assert.AreEqual(cipherItemSaved.Card.Number.CipherString        , cipherItem.Card.Number.CipherString        );
+        Assert.AreEqual(cipherItemSaved.Card.CardholderName.CipherString, cipherItem.Card.CardholderName.CipherString);
+        Assert.AreEqual(cipherItemSaved.Card.Code.CipherString          , cipherItem.Card.Code.CipherString          );
+        Assert.AreEqual(cipherItemSaved.Card.ExpYear.CipherString       , cipherItem.Card.ExpYear.CipherString       );
+
+        await VaultWebClient.DeleteCipherItemAsync(cipherItemSaved.Id.Value);
+    }
+
+    [TestMethod]
+    public async Task _3004_TestUserCreateIdentityItemAsync()
+    {
+        // TODO: Test for item existence before creating to not leave dangling tests
+
+        var cipherItem = new CipherItemModel(UserCryptoService)
+        {
+            Name = new EncryptedString(UserCryptoService)
+            {
+                ClearString = "TestCreateUserLoginItem"
+            },
+            Favorite = true,
+            Edit = true,
+            Reprompt = CipherRepromptType.Password,
+            FolderId = Guid.Parse(TestUserFolderId),
+            Notes = new EncryptedString(UserCryptoService)
+            {
+                ClearString = "TestCreateUserNotes"
+            },
+            ViewPassword = true,
+        };
+
+        var identityItem = cipherItem.CreateIdentity();
+        identityItem.Address1  = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserIdentityItemAddress1"
+        };
+        identityItem.Address2  = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserIdentityItemAddress2"
+        };
+        identityItem.Address3  = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserIdentityItemAddress3"
+        };
+        identityItem.City  = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserIdentityItemCity"
+        };
+        identityItem.Company  = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserIdentityItemCompany"
+        };
+        identityItem.Country  = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserIdentityItemCountry"
+        };
+        identityItem.Email  = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserIdentityItemEmail"
+        };
+        identityItem.FirstName  = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserIdentityItemFirstName"
+        };
+        identityItem.LastName  = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserIdentityItemLastName"
+        };
+        identityItem.LicenseNumber  = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserIdentityItemLicenseNumber"
+        };
+        identityItem.MiddleName  = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserIdentityItemMiddleName"
+        };
+        identityItem.PassportNumber  = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserIdentityItemPassportNumber"
+        };
+        identityItem.Phone  = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserIdentityItemPhone"
+        };
+        identityItem.PostalCode  = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserIdentityItemPostalCode"
+        };
+        identityItem.SSN  = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserIdentityItemSSN"
+        };
+        identityItem.State  = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserIdentityItemState"
+        };
+        identityItem.Title  = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserIdentityItemTitle"
+        };
+        identityItem.Username = new EncryptedString(UserCryptoService)
+        {
+            ClearString = "TestCreateUserIdentityItemUsername"
+        };
+
+        var cipherItemSaved = await VaultWebClient.CreateCipherItemAsync(cipherItem);
+        Assert.IsNotNull(cipherItemSaved?.Id);
+        Assert.AreEqual(cipherItemSaved.Name.ClearString, cipherItem.Name.ClearString);
+        Assert.AreEqual(cipherItemSaved.Name.CipherString, cipherItem.Name.CipherString);
+
+        Assert.AreEqual(cipherItemSaved.Notes.ClearString, cipherItem.Notes.ClearString);
+        Assert.AreEqual(cipherItemSaved.Notes.CipherString, cipherItem.Notes.CipherString);
+
+        Assert.AreEqual(cipherItemSaved.Favorite, cipherItem.Favorite);
+        Assert.AreEqual(cipherItemSaved.Edit, cipherItem.Edit);
+        Assert.AreEqual(cipherItemSaved.Reprompt, cipherItem.Reprompt);
+        Assert.AreEqual(cipherItemSaved.FolderId, cipherItem.FolderId);
+        Assert.AreEqual(cipherItemSaved.ViewPassword, cipherItem.ViewPassword);
+
+        Assert.AreEqual(cipherItemSaved.Identity.Address1.ClearString      , cipherItem.Identity.Address1.ClearString      );
+        Assert.AreEqual(cipherItemSaved.Identity.Address2.ClearString      , cipherItem.Identity.Address2.ClearString      );
+        Assert.AreEqual(cipherItemSaved.Identity.Address3.ClearString      , cipherItem.Identity.Address3.ClearString      );
+        Assert.AreEqual(cipherItemSaved.Identity.City.ClearString          , cipherItem.Identity.City.ClearString          );
+        Assert.AreEqual(cipherItemSaved.Identity.Company.ClearString       , cipherItem.Identity.Company.ClearString       );
+        Assert.AreEqual(cipherItemSaved.Identity.Country.ClearString       , cipherItem.Identity.Country.ClearString       );
+        Assert.AreEqual(cipherItemSaved.Identity.Email.ClearString         , cipherItem.Identity.Email.ClearString         );
+        Assert.AreEqual(cipherItemSaved.Identity.FirstName.ClearString     , cipherItem.Identity.FirstName.ClearString     );
+        Assert.AreEqual(cipherItemSaved.Identity.LastName.ClearString      , cipherItem.Identity.LastName.ClearString      );
+        Assert.AreEqual(cipherItemSaved.Identity.LicenseNumber.ClearString , cipherItem.Identity.LicenseNumber.ClearString );
+        Assert.AreEqual(cipherItemSaved.Identity.MiddleName.ClearString    , cipherItem.Identity.MiddleName.ClearString    );
+        Assert.AreEqual(cipherItemSaved.Identity.PassportNumber.ClearString, cipherItem.Identity.PassportNumber.ClearString);
+        Assert.AreEqual(cipherItemSaved.Identity.Phone.ClearString         , cipherItem.Identity.Phone.ClearString         );
+        Assert.AreEqual(cipherItemSaved.Identity.PostalCode.ClearString    , cipherItem.Identity.PostalCode.ClearString    );
+        Assert.AreEqual(cipherItemSaved.Identity.SSN.ClearString           , cipherItem.Identity.SSN.ClearString           );
+        Assert.AreEqual(cipherItemSaved.Identity.State.ClearString         , cipherItem.Identity.State.ClearString         );
+        Assert.AreEqual(cipherItemSaved.Identity.Title.ClearString         , cipherItem.Identity.Title.ClearString         );
+        Assert.AreEqual(cipherItemSaved.Identity.Username.ClearString      , cipherItem.Identity.Username.ClearString      );
+
+        Assert.AreEqual(cipherItemSaved.Identity.Address1.CipherString      , cipherItem.Identity.Address1.CipherString      );
+        Assert.AreEqual(cipherItemSaved.Identity.Address2.CipherString      , cipherItem.Identity.Address2.CipherString      );
+        Assert.AreEqual(cipherItemSaved.Identity.Address3.CipherString      , cipherItem.Identity.Address3.CipherString      );
+        Assert.AreEqual(cipherItemSaved.Identity.City.CipherString          , cipherItem.Identity.City.CipherString          );
+        Assert.AreEqual(cipherItemSaved.Identity.Company.CipherString       , cipherItem.Identity.Company.CipherString       );
+        Assert.AreEqual(cipherItemSaved.Identity.Country.CipherString       , cipherItem.Identity.Country.CipherString       );
+        Assert.AreEqual(cipherItemSaved.Identity.Email.CipherString         , cipherItem.Identity.Email.CipherString         );
+        Assert.AreEqual(cipherItemSaved.Identity.FirstName.CipherString     , cipherItem.Identity.FirstName.CipherString     );
+        Assert.AreEqual(cipherItemSaved.Identity.LastName.CipherString      , cipherItem.Identity.LastName.CipherString      );
+        Assert.AreEqual(cipherItemSaved.Identity.LicenseNumber.CipherString , cipherItem.Identity.LicenseNumber.CipherString );
+        Assert.AreEqual(cipherItemSaved.Identity.MiddleName.CipherString    , cipherItem.Identity.MiddleName.CipherString    );
+        Assert.AreEqual(cipherItemSaved.Identity.PassportNumber.CipherString, cipherItem.Identity.PassportNumber.CipherString);
+        Assert.AreEqual(cipherItemSaved.Identity.Phone.CipherString         , cipherItem.Identity.Phone.CipherString         );
+        Assert.AreEqual(cipherItemSaved.Identity.PostalCode.CipherString    , cipherItem.Identity.PostalCode.CipherString    );
+        Assert.AreEqual(cipherItemSaved.Identity.SSN.CipherString           , cipherItem.Identity.SSN.CipherString           );
+        Assert.AreEqual(cipherItemSaved.Identity.State.CipherString         , cipherItem.Identity.State.CipherString         );
+        Assert.AreEqual(cipherItemSaved.Identity.Title.CipherString         , cipherItem.Identity.Title.CipherString         );
+        Assert.AreEqual(cipherItemSaved.Identity.Username.CipherString      , cipherItem.Identity.Username.CipherString      );
+
+        await VaultWebClient.DeleteCipherItemAsync(cipherItemSaved.Id.Value);
+    }
+
+    [TestMethod]
+    public async Task _3005_TestUserCreateSSHKeyItemAsync()
+    {
+        // TODO: Test for item existence before creating to not leave dangling tests
+
+        var cipherItem = new CipherItemModel(UserCryptoService)
+        {
+            Name = new EncryptedString(UserCryptoService)
+            {
+                ClearString = "TestCreateUserRSAKeyItem"
+            },
+            Favorite = true,
+            Edit = true,
+            Reprompt = CipherRepromptType.Password,
+            FolderId = Guid.Parse(TestUserFolderId),
+            Notes = new EncryptedString(UserCryptoService)
+            {
+                ClearString = "TestCreateUserNotes"
+            },
+            ViewPassword = true,
+        };
+
+        var rsaKey = BitWardenHelper.GenerateRSAKey();
+
+        var sshKeyItem = cipherItem.CreateSSHKey();
+        sshKeyItem.PublicKey = new EncryptedString(UserCryptoService)
+        {
+            ClearString = rsaKey.PublicKey,
+        };
+        sshKeyItem.PrivateKey = new EncryptedString(UserCryptoService)
+        {
+            ClearString = rsaKey.PrivateKey,
+        };
+        sshKeyItem.KeyFingerprint = new EncryptedString(UserCryptoService)
+        {
+            ClearString = rsaKey.Fingerprint,
+        };
+
+        var cipherItemSaved = await VaultWebClient.CreateCipherItemAsync(cipherItem);
+        Assert.IsNotNull(cipherItemSaved?.Id);
+        Assert.AreEqual(cipherItemSaved.Name.ClearString, cipherItem.Name.ClearString);
+        Assert.AreEqual(cipherItemSaved.Name.CipherString, cipherItem.Name.CipherString);
+
+        Assert.AreEqual(cipherItemSaved.Notes.ClearString, cipherItem.Notes.ClearString);
+        Assert.AreEqual(cipherItemSaved.Notes.CipherString, cipherItem.Notes.CipherString);
+
+        Assert.AreEqual(cipherItemSaved.SSHKey.PublicKey.ClearString, cipherItem.SSHKey.PublicKey.ClearString);
+        Assert.AreEqual(cipherItemSaved.SSHKey.PublicKey.CipherString, cipherItem.SSHKey.PublicKey.CipherString);
+
+        Assert.AreEqual(cipherItemSaved.SSHKey.PrivateKey.ClearString, cipherItem.SSHKey.PrivateKey.ClearString);
+        Assert.AreEqual(cipherItemSaved.SSHKey.PrivateKey.CipherString, cipherItem.SSHKey.PrivateKey.CipherString);
+
+        Assert.AreEqual(cipherItemSaved.SSHKey.KeyFingerprint.ClearString, cipherItem.SSHKey.KeyFingerprint.ClearString);
+        Assert.AreEqual(cipherItemSaved.SSHKey.KeyFingerprint.CipherString, cipherItem.SSHKey.KeyFingerprint.CipherString);
+
+        await VaultWebClient.DeleteCipherItemAsync(cipherItemSaved.Id.Value);
+    }
+
+    [TestMethod]
     public async Task _3006_TestUserCreateFolderItemAsync()
     {
         // TODO: Test for item existence before creating to not leave dangling tests

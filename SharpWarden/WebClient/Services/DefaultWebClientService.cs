@@ -403,6 +403,21 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         return apiModel;
     }
 
+    private CipherItemSSHKeyRequestAPIModel _BuildCipherItemSSHKeyRequest(CipherItemModel itemModel)
+    {
+        var apiModel = new CipherItemSSHKeyRequestAPIModel
+        {
+            SSHKey = new CipherSSHKeyAPIModel
+            {
+                KeyFingerprint = itemModel.SSHKey.KeyFingerprint.CipherString,
+                PublicKey = itemModel.SSHKey.PublicKey.CipherString,
+                PrivateKey = itemModel.SSHKey.PrivateKey.CipherString,
+            }
+        };
+        _FillCipherItemAPIModel(apiModel, itemModel);
+        return apiModel;
+    }
+
     private CipherItemCreateRequestAPIModel<CipherItemLoginRequestAPIModel> _BuildOrganizationCipherItemLogin(CipherItemModel cipherItem, IEnumerable<Guid> collectionIds)
     {
         var apiModel = new CipherItemCreateRequestAPIModel<CipherItemLoginRequestAPIModel>
@@ -438,6 +453,16 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         var apiModel = new CipherItemCreateRequestAPIModel<CipherItemIdentityRequestAPIModel>
         {
             Cipher = _BuildCipherItemIdentityRequest(cipherItem),
+            CollectionIds = collectionIds.ToList()
+        };
+        return apiModel;
+    }
+
+    private CipherItemCreateRequestAPIModel<CipherItemSSHKeyRequestAPIModel> _BuildOrganizationCipherItemSSHKey(CipherItemModel cipherItem, IEnumerable<Guid> collectionIds)
+    {
+        var apiModel = new CipherItemCreateRequestAPIModel<CipherItemSSHKeyRequestAPIModel>
+        {
+            Cipher = _BuildCipherItemSSHKeyRequest(cipherItem),
             CollectionIds = collectionIds.ToList()
         };
         return apiModel;
@@ -516,6 +541,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
                 case CipherItemType.SecureNote: return await _CreateAPIAsync<CipherItemModel, CipherItemSecureNoteRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", _BuildCipherItemSecureNoteRequest(cipherItem));
                 case CipherItemType.Card      : return await _CreateAPIAsync<CipherItemModel, CipherItemCardRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", _BuildCipherItemCardRequest(cipherItem));
                 case CipherItemType.Identity  : return await _CreateAPIAsync<CipherItemModel, CipherItemIdentityRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", _BuildCipherItemIdentityRequest(cipherItem));
+                case CipherItemType.SSHKey    : return await _CreateAPIAsync<CipherItemModel, CipherItemSSHKeyRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", _BuildCipherItemSSHKeyRequest(cipherItem));
             }
         }
         else
@@ -540,6 +566,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
             case CipherItemType.SecureNote: return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemSecureNoteRequestAPIModel>>($"{_BaseUrl}{CiphersApiPath}/create", _BuildOrganizationCipherItemSecureNote(cipherItem, collectionIds));
             case CipherItemType.Card      : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemCardRequestAPIModel>>($"{_BaseUrl}{CiphersApiPath}/create", _BuildOrganizationCipherItemCard(cipherItem, collectionIds));
             case CipherItemType.Identity  : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemIdentityRequestAPIModel>>($"{_BaseUrl}{CiphersApiPath}/create", _BuildOrganizationCipherItemIdentity(cipherItem, collectionIds));
+            case CipherItemType.SSHKey    : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemSSHKeyRequestAPIModel>>($"{_BaseUrl}{CiphersApiPath}/create", _BuildOrganizationCipherItemSSHKey(cipherItem, collectionIds));
         }
         
         throw new InvalidDataException($"Unhandled cipher item type: {cipherItem.ItemType}");
