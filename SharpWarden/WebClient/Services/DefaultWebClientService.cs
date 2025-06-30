@@ -319,7 +319,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         apiModel.LastKnownRevisionDate = null;
     }
 
-    private CipherItemLoginRequestAPIModel _BuildCipherItemLoginRequestAsync(CipherItemModel itemModel)
+    private CipherItemLoginRequestAPIModel _BuildCipherItemLoginRequest(CipherItemModel itemModel)
     {
         var apiModel = new CipherItemLoginRequestAPIModel
         {
@@ -342,7 +342,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         return apiModel;
     }
 
-    private CipherItemSecureNoteRequestAPIModel _BuildCipherItemSecureNoteRequestAsync(CipherItemModel itemModel)
+    private CipherItemSecureNoteRequestAPIModel _BuildCipherItemSecureNoteRequest(CipherItemModel itemModel)
     {
         var apiModel = new CipherItemSecureNoteRequestAPIModel
         {
@@ -355,7 +355,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         return apiModel;
     }
 
-    private CipherItemCardRequestAPIModel _BuildCipherItemCardRequestAsync(CipherItemModel itemModel)
+    private CipherItemCardRequestAPIModel _BuildCipherItemCardRequest(CipherItemModel itemModel)
     {
         var apiModel = new CipherItemCardRequestAPIModel
         {
@@ -373,7 +373,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         return apiModel;
     }
 
-    private CipherItemIdentityRequestAPIModel _BuildCipherItemIdentityRequestAsync(CipherItemModel itemModel)
+    private CipherItemIdentityRequestAPIModel _BuildCipherItemIdentityRequest(CipherItemModel itemModel)
     {
         var apiModel = new CipherItemIdentityRequestAPIModel
         {
@@ -400,6 +400,46 @@ public class DefaultWebClientService : IWebClientService, IDisposable
             }
         };
         _FillCipherItemAPIModel(apiModel, itemModel);
+        return apiModel;
+    }
+
+    private CipherItemCreateRequestAPIModel<CipherItemLoginRequestAPIModel> _BuildOrganizationCipherItemLogin(CipherItemModel cipherItem, IEnumerable<Guid> collectionIds)
+    {
+        var apiModel = new CipherItemCreateRequestAPIModel<CipherItemLoginRequestAPIModel>
+        {
+            Cipher = _BuildCipherItemLoginRequest(cipherItem),
+            CollectionIds = collectionIds.ToList()
+        };
+        return apiModel;
+    }
+
+    private CipherItemCreateRequestAPIModel<CipherItemSecureNoteRequestAPIModel> _BuildOrganizationCipherItemSecureNote(CipherItemModel cipherItem, IEnumerable<Guid> collectionIds)
+    {
+        var apiModel = new CipherItemCreateRequestAPIModel<CipherItemSecureNoteRequestAPIModel>
+        {
+            Cipher = _BuildCipherItemSecureNoteRequest(cipherItem),
+            CollectionIds = collectionIds.ToList()
+        };
+        return apiModel;
+    }
+
+    private CipherItemCreateRequestAPIModel<CipherItemCardRequestAPIModel> _BuildOrganizationCipherItemCard(CipherItemModel cipherItem, IEnumerable<Guid> collectionIds)
+    {
+        var apiModel = new CipherItemCreateRequestAPIModel<CipherItemCardRequestAPIModel>
+        {
+            Cipher = _BuildCipherItemCardRequest(cipherItem),
+            CollectionIds = collectionIds.ToList()
+        };
+        return apiModel;
+    }
+
+    private CipherItemCreateRequestAPIModel<CipherItemIdentityRequestAPIModel> _BuildOrganizationCipherItemIdentity(CipherItemModel cipherItem, IEnumerable<Guid> collectionIds)
+    {
+        var apiModel = new CipherItemCreateRequestAPIModel<CipherItemIdentityRequestAPIModel>
+        {
+            Cipher = _BuildCipherItemIdentityRequest(cipherItem),
+            CollectionIds = collectionIds.ToList()
+        };
         return apiModel;
     }
 
@@ -468,14 +508,40 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
     public async Task<CipherItemModel> CreateCipherItemAsync(CipherItemModel cipherItem)
     {
-        switch (cipherItem.ItemType)
+        if (cipherItem.OrganizationId == null)
         {
-            case CipherItemType.Login     : return await _CreateAPIAsync<CipherItemModel, CipherItemLoginRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", _BuildCipherItemLoginRequestAsync(cipherItem));
-            case CipherItemType.SecureNote: return await _CreateAPIAsync<CipherItemModel, CipherItemSecureNoteRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", _BuildCipherItemSecureNoteRequestAsync(cipherItem));
-            case CipherItemType.Card      : return await _CreateAPIAsync<CipherItemModel, CipherItemCardRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", _BuildCipherItemCardRequestAsync(cipherItem));
-            case CipherItemType.Identity  : return await _CreateAPIAsync<CipherItemModel, CipherItemIdentityRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", _BuildCipherItemIdentityRequestAsync(cipherItem));
+            switch (cipherItem.ItemType)
+            {
+                case CipherItemType.Login     : return await _CreateAPIAsync<CipherItemModel, CipherItemLoginRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", _BuildCipherItemLoginRequest(cipherItem));
+                case CipherItemType.SecureNote: return await _CreateAPIAsync<CipherItemModel, CipherItemSecureNoteRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", _BuildCipherItemSecureNoteRequest(cipherItem));
+                case CipherItemType.Card      : return await _CreateAPIAsync<CipherItemModel, CipherItemCardRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", _BuildCipherItemCardRequest(cipherItem));
+                case CipherItemType.Identity  : return await _CreateAPIAsync<CipherItemModel, CipherItemIdentityRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", _BuildCipherItemIdentityRequest(cipherItem));
+            }
+        }
+        else
+        {
+            return await CreateOrganizationCipherItemAsync(cipherItem, cipherItem.CollectionsIds);
         }
 
+        throw new InvalidDataException($"Unhandled cipher item type: {cipherItem.ItemType}");
+    }
+
+    public async Task<CipherItemModel> CreateOrganizationCipherItemAsync(CipherItemModel cipherItem, IEnumerable<Guid> collectionIds)
+    {
+        if (cipherItem.OrganizationId == null)
+            throw new InvalidDataException($"{nameof(CipherItemModel.OrganizationId)} must be set.");
+
+        if (!(cipherItem.CollectionsIds?.Count > 0))
+            throw new InvalidDataException($"{nameof(collectionIds)} must have at least 1 collection id.");
+            
+        switch (cipherItem.ItemType)
+        {
+            case CipherItemType.Login     : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemLoginRequestAPIModel>>($"{_BaseUrl}{CiphersApiPath}/create", _BuildOrganizationCipherItemLogin(cipherItem, collectionIds));
+            case CipherItemType.SecureNote: return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemSecureNoteRequestAPIModel>>($"{_BaseUrl}{CiphersApiPath}/create", _BuildOrganizationCipherItemSecureNote(cipherItem, collectionIds));
+            case CipherItemType.Card      : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemCardRequestAPIModel>>($"{_BaseUrl}{CiphersApiPath}/create", _BuildOrganizationCipherItemCard(cipherItem, collectionIds));
+            case CipherItemType.Identity  : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemIdentityRequestAPIModel>>($"{_BaseUrl}{CiphersApiPath}/create", _BuildOrganizationCipherItemIdentity(cipherItem, collectionIds));
+        }
+        
         throw new InvalidDataException($"Unhandled cipher item type: {cipherItem.ItemType}");
     }
 
@@ -483,10 +549,10 @@ public class DefaultWebClientService : IWebClientService, IDisposable
     {
         switch (cipherItem.ItemType)
         {
-            case CipherItemType.Login     : return await _UpdateAPIAsync<CipherItemModel, CipherItemLoginRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", id, _BuildCipherItemLoginRequestAsync(cipherItem));
-            case CipherItemType.SecureNote: return await _UpdateAPIAsync<CipherItemModel, CipherItemSecureNoteRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", id, _BuildCipherItemSecureNoteRequestAsync(cipherItem));
-            case CipherItemType.Card      : return await _UpdateAPIAsync<CipherItemModel, CipherItemCardRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", id, _BuildCipherItemCardRequestAsync(cipherItem));
-            case CipherItemType.Identity  : return await _UpdateAPIAsync<CipherItemModel, CipherItemIdentityRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", id, _BuildCipherItemIdentityRequestAsync(cipherItem));
+            case CipherItemType.Login: return await _UpdateAPIAsync<CipherItemModel, CipherItemLoginRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", id, _BuildCipherItemLoginRequest(cipherItem));
+            case CipherItemType.SecureNote: return await _UpdateAPIAsync<CipherItemModel, CipherItemSecureNoteRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", id, _BuildCipherItemSecureNoteRequest(cipherItem));
+            case CipherItemType.Card: return await _UpdateAPIAsync<CipherItemModel, CipherItemCardRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", id, _BuildCipherItemCardRequest(cipherItem));
+            case CipherItemType.Identity: return await _UpdateAPIAsync<CipherItemModel, CipherItemIdentityRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", id, _BuildCipherItemIdentityRequest(cipherItem));
         }
 
         throw new InvalidDataException($"Unhandled cipher item type: {cipherItem.ItemType}");

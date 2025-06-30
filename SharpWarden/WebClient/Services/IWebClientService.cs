@@ -48,7 +48,22 @@ public interface IWebClientService
 
     public Task DeleteCipherItemAttachmentAsync(Guid id, string attachmentId);
 
+    /// <summary>
+    /// Creates an user item. Can also be used to create an organization item but you will need to provide the OrganizationId AND at least one CollectionId. 
+    /// </summary>
+    /// <param name="cipherItem"></param>
+    /// <returns></returns>
+    /// <exception cref="InvalidDataException"></exception>
     public Task<CipherItemModel> CreateCipherItemAsync(CipherItemModel cipherItem);
+
+    /// <summary>
+    /// Create an organization item.
+    /// </summary>
+    /// <param name="cipherItem"></param>
+    /// <param name="collectionIds"></param>
+    /// <returns></returns>
+    /// <exception cref="InvalidDataException"></exception>
+    public Task<CipherItemModel> CreateOrganizationCipherItemAsync(CipherItemModel cipherItem, IEnumerable<Guid> collectionIds);
 
     public Task<CipherItemModel> UpdateCipherItemAsync(Guid id, CipherItemModel cipherItem);
 

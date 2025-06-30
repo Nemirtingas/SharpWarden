@@ -23,6 +23,7 @@ public static class BitWardenHelper
         services.AddScoped<ICryptoService, DefaultCryptoService>();
         services.AddScoped<IUserCryptoService, UserCryptoService>();
         services.AddScoped<IVaultService, DefaultVaultService>();
+        services.AddScoped<IOrganizationCryptoFactoryService, DefaultOrganizationCryptoFactoryService>();
         services.AddScoped<IWebClientService, DefaultWebClientService>((services) =>
         {
             return new DefaultWebClientService(services.GetRequiredService<ISessionJsonConverterService>(), hostBase, null, webClientId);
