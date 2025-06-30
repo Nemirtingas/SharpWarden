@@ -3,11 +3,9 @@
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 // See LICENSE.txt in the project root for more information.
 
-namespace SharpWarden.NotificationClient.Models;
+namespace SharpWarden.BitWardenDatabaseSession.Services;
 
-public class SyncFolderPushNotificationModel
+public interface IOrganizationCryptoFactoryService
 {
-    public Guid Id { get; set; }
-    public Guid UserId { get; set; }
-    public DateTime RevisionDate { get; set; }
+    IUserCryptoService GetOrganizationCryptoService(Guid organizationId);
 }
