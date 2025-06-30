@@ -10,6 +10,11 @@ namespace SharpWarden.BitWardenDatabaseSession.Services;
 public interface IVaultService
 {
     /// <summary>
+    /// Sets the internal database reference to the one passed in parameter.
+    /// </summary>
+    /// <param name="database"></param>
+    void ReloadBitWardenDatabase(DatabaseModel database);
+    /// <summary>
     /// This will load a database, presumably downloaded via the <see cref="WebClient.WebClient.GetDatabaseAsync"/>.
     /// </summary>
     /// <param name="userPassword"></param>

@@ -42,6 +42,11 @@ public class DefaultVaultService : IVaultService
             _KeyProviderService.LoadBitWardenOrganizationKey(organization.Id, organization.Key);
     }
 
+    public void ReloadBitWardenDatabase(DatabaseModel database)
+    {
+        _Database = database;
+    }
+
     public DatabaseModel GetBitWardenDatabase()
     {
         return _Database;
