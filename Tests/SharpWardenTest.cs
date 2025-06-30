@@ -737,6 +737,8 @@ public sealed class SharpWardenTest
         await VaultWebClient.RestoreCipherItemAsync(cipherItemSaved.Id.Value);
         cipherItemSaved = await VaultWebClient.GetCipherItemAsync(cipherItemSaved.Id.Value);
         Assert.IsNull(cipherItemSaved.DeletedDate);
+
+        await VaultWebClient.DeleteCipherItemAsync(cipherItemSaved.Id.Value);
     }
 
     [TestMethod]
