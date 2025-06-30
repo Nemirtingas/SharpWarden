@@ -67,6 +67,10 @@ public interface IWebClientService
 
     public Task<CipherItemModel> UpdateCipherItemAsync(Guid id, CipherItemModel cipherItem);
 
+    public Task MoveToTrashCipherItemAsync(Guid id);
+
+    public Task RestoreCipherItemAsync(Guid id);
+
     public Task DeleteCipherItemAsync(Guid id);
 
     public Task DeleteCipherItemsAsync(IEnumerable<Guid> ids);

@@ -25,12 +25,14 @@ public sealed class SharpWardenTest
     const string TestUserItemCustomFieldsId = "c59db8cb-3036-49cb-a16d-b307006c213d";
 
     const string TestOrganizationId = "9dab2223-5ee2-480d-ace2-b3020126075b";
+    const string TestOrganizationCollectionId = "16a3dadf-cfa3-4bab-a097-b30201260764";
     const string TestOrganizationItemId = "2c94bf3f-fcfe-48eb-b19c-b307006b69be";
 
     private static IServiceScope DatabaseSessionScope;
     private static IWebClientService VaultWebClient;
     private static IVaultService VaultService;
     private static IUserCryptoService UserCryptoService;
+    private static IOrganizationCryptoFactoryService OrganizationCryptoFactoryService;
     private static string TestAccountUser;
     private static string TestAccountSecret;
     private static string TestAccountPassword;
@@ -42,6 +44,7 @@ public sealed class SharpWardenTest
         VaultWebClient = DatabaseSessionScope.ServiceProvider.GetRequiredService<IWebClientService>();
         VaultService = DatabaseSessionScope.ServiceProvider.GetRequiredService<IVaultService>();
         UserCryptoService = DatabaseSessionScope.ServiceProvider.GetRequiredService<IUserCryptoService>();
+        OrganizationCryptoFactoryService = DatabaseSessionScope.ServiceProvider.GetRequiredService<IOrganizationCryptoFactoryService>();
         TestAccountUser = Environment.GetEnvironmentVariable("SHARP_WARDEN_TEST_ACCOUNT_USER");
         TestAccountSecret = Environment.GetEnvironmentVariable("SHARP_WARDEN_TEST_ACCOUNT_SECRET");
         TestAccountPassword = Environment.GetEnvironmentVariable("SHARP_WARDEN_TEST_ACCOUNT_PASSWORD");
@@ -79,7 +82,7 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _1003_TestUserCipherItemAsync()
+    public async Task _0103_TestUserCipherItemAsync()
     {
         var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemId));
 
@@ -92,7 +95,7 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _1004_TestUserFolderItemAsync()
+    public async Task _0104_TestUserFolderItemAsync()
     {
         var folder = VaultService.GetBitWardenDatabase().Folders.Find(e => e.Id == Guid.Parse(TestUserFolderId));
 
@@ -102,7 +105,7 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _1005_TestUserItemInFolderAsync()
+    public async Task _0105_TestUserItemInFolderAsync()
     {
         var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemInFolderId));
 
@@ -115,7 +118,7 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _1006_TestUserItemLoginAsync()
+    public async Task _0106_TestUserItemLoginAsync()
     {
         var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemLoginId));
 
@@ -150,7 +153,7 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _1007_TestUserItemCardAsync()
+    public async Task _0107_TestUserItemCardAsync()
     {
         var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemCardId));
 
@@ -168,7 +171,7 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _1008_TestUserItemIdentityAsync()
+    public async Task _0108_TestUserItemIdentityAsync()
     {
         var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemIdentityId));
 
@@ -197,7 +200,7 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _1009_TestUserItemSecureNoteAsync()
+    public async Task _0109_TestUserItemSecureNoteAsync()
     {
         var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemSecureNoteId));
 
@@ -210,7 +213,7 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _1010_TestUserItemSSHKeyAsync()
+    public async Task _0110_TestUserItemSSHKeyAsync()
     {
         var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemSSHKeyId));
 
@@ -225,7 +228,7 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _1011_TestUserItemCustomFieldsAsync()
+    public async Task _0111_TestUserItemCustomFieldsAsync()
     {
         var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemCustomFieldsId));
 
@@ -259,7 +262,7 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _2001_TestOrganizationCipherItemAsync()
+    public async Task _0201_TestOrganizationCipherItemAsync()
     {
         var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestOrganizationItemId) && e.OrganizationId == Guid.Parse(TestOrganizationId));
 
@@ -272,7 +275,7 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _3001_TestUserCreateLoginItemAsync()
+    public async Task _0301_TestUserCreateLoginItemAsync()
     {
         // TODO: Test for item existence before creating to not leave dangling tests
 
@@ -334,7 +337,7 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _3002_TestUserCreateSecureNoteItemAsync()
+    public async Task _0302_TestUserCreateSecureNoteItemAsync()
     {
         // TODO: Test for item existence before creating to not leave dangling tests
 
@@ -378,7 +381,7 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _3003_TestUserCreateCardItemAsync()
+    public async Task _0303_TestUserCreateCardItemAsync()
     {
         // TODO: Test for item existence before creating to not leave dangling tests
 
@@ -457,7 +460,7 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _3004_TestUserCreateIdentityItemAsync()
+    public async Task _0304_TestUserCreateIdentityItemAsync()
     {
         // TODO: Test for item existence before creating to not leave dangling tests
 
@@ -608,7 +611,7 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _3005_TestUserCreateSSHKeyItemAsync()
+    public async Task _0305_TestUserCreateSSHKeyItemAsync()
     {
         // TODO: Test for item existence before creating to not leave dangling tests
 
@@ -666,7 +669,7 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _3006_TestUserCreateFolderItemAsync()
+    public async Task _0306_TestUserCreateFolderItemAsync()
     {
         // TODO: Test for item existence before creating to not leave dangling tests
 
@@ -708,7 +711,141 @@ public sealed class SharpWardenTest
     }
 
     [TestMethod]
-    public async Task _4001_TestNotificationAsync()
+    public async Task _0307_TestUserTrashCipherItemAsync()
+    {
+        var cipherItem = new CipherItemModel(UserCryptoService)
+        {
+            Name = new EncryptedString(UserCryptoService)
+            {
+                ClearString = "TestTrashItem"
+            },
+        };
+
+        var secureNoteItem = cipherItem.CreateSecureNote();
+        secureNoteItem.Type = SecureNoteType.Generic;
+
+        var cipherItemSaved = await VaultWebClient.CreateCipherItemAsync(cipherItem);
+        Assert.IsNotNull(cipherItemSaved?.Id);
+        Assert.AreEqual(cipherItemSaved.Name.ClearString, cipherItem.Name.ClearString);
+        Assert.AreEqual(cipherItemSaved.Name.CipherString, cipherItem.Name.CipherString);
+        Assert.IsNull(cipherItemSaved.DeletedDate);
+
+        await VaultWebClient.MoveToTrashCipherItemAsync(cipherItemSaved.Id.Value);
+        cipherItemSaved = await VaultWebClient.GetCipherItemAsync(cipherItemSaved.Id.Value);
+        Assert.IsNotNull(cipherItemSaved.DeletedDate);
+
+        await VaultWebClient.RestoreCipherItemAsync(cipherItemSaved.Id.Value);
+        cipherItemSaved = await VaultWebClient.GetCipherItemAsync(cipherItemSaved.Id.Value);
+        Assert.IsNull(cipherItemSaved.DeletedDate);
+    }
+
+    [TestMethod]
+    public async Task _0401_TestOrganizationCreateLoginItemAsync()
+    {
+        // TODO: Test for item existence before creating to not leave dangling tests
+
+        var organizationCryptoService = OrganizationCryptoFactoryService.GetOrganizationCryptoService(Guid.Parse(TestOrganizationId));
+
+        var cipherItem = new CipherItemModel(organizationCryptoService)
+        {
+            Name = new EncryptedString(organizationCryptoService)
+            {
+                ClearString = "TestCreateOrganizationLoginItem"
+            },
+            Favorite = true,
+            Edit = true,
+            Reprompt = CipherRepromptType.Password,
+            FolderId = Guid.Parse(TestUserFolderId),
+            Notes = new EncryptedString(organizationCryptoService)
+            {
+                ClearString = "TestCreateOrganizationNotes"
+            },
+            ViewPassword = true,
+            OrganizationId = Guid.Parse(TestOrganizationId),
+            CollectionsIds = [Guid.Parse(TestOrganizationCollectionId)],
+        };
+
+        var loginItem = cipherItem.CreateLogin();
+        loginItem.Username = new EncryptedString(organizationCryptoService)
+        {
+            ClearString = "TestOrganizationUsername",
+        };
+        loginItem.Password = new EncryptedString(organizationCryptoService)
+        {
+            ClearString = "TestOrganizationPassword",
+        };
+
+        var cipherItemSaved = await VaultWebClient.CreateCipherItemAsync(cipherItem);
+
+        Assert.IsNotNull(cipherItemSaved?.Id);
+        Assert.AreEqual(cipherItemSaved.Name.ClearString, cipherItem.Name.ClearString);
+        Assert.AreEqual(cipherItemSaved.Name.CipherString, cipherItem.Name.CipherString);
+        Assert.AreEqual(cipherItemSaved.OrganizationId, cipherItem.OrganizationId);
+
+        Assert.AreEqual(cipherItemSaved.Login.Username.ClearString, cipherItem.Login.Username.ClearString);
+        Assert.AreEqual(cipherItemSaved.Login.Username.CipherString, cipherItem.Login.Username.CipherString);
+
+        Assert.AreEqual(cipherItemSaved.Login.Password.ClearString, cipherItem.Login.Password.ClearString);
+        Assert.AreEqual(cipherItemSaved.Login.Password.CipherString, cipherItem.Login.Password.CipherString);
+
+        // The collection ids are not returned on creation result,
+        // but if someday they do, its handled.
+        if (cipherItemSaved.CollectionsIds == null)
+        {
+            VaultService.ReloadBitWardenDatabase(await VaultWebClient.GetDatabaseAsync());
+            cipherItemSaved = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == cipherItemSaved.Id.Value);
+        }
+
+        Assert.AreEqual(cipherItemSaved.CollectionsIds.Count, cipherItem.CollectionsIds.Count);
+        Assert.AreEqual(cipherItemSaved.CollectionsIds[0], cipherItem.CollectionsIds[0]);
+
+        await VaultWebClient.DeleteCipherItemAsync(cipherItemSaved.Id.Value);
+    }
+
+    [TestMethod]
+    public async Task _0402_TestUserCreateFolderItemAsync()
+    {
+        // TODO: Test for item existence before creating to not leave dangling tests
+
+        var cryptString = new EncryptedString(UserCryptoService);
+        cryptString.ClearString = "TestDirectory";
+
+        var folder = await VaultWebClient.CreateFolderAsync(cryptString.CipherString);
+        Assert.IsNotNull(folder?.Id);
+        Assert.AreEqual(folder.Name.CipherString, cryptString.CipherString);
+        Assert.AreEqual(folder.Name.ClearString, cryptString.ClearString);
+        var folderId = folder.Id.Value;
+
+        cryptString.ClearString = "Renamed TestDirectory";
+        folder = await VaultWebClient.UpdateFolderAsync(folder.Id.Value, cryptString.CipherString);
+        Assert.IsNotNull(folder?.Id);
+        Assert.AreEqual(folder?.Id, folderId);
+        Assert.AreEqual(folder.Name.CipherString, cryptString.CipherString);
+        Assert.AreEqual(folder.Name.ClearString, cryptString.ClearString);
+
+        var folders = await VaultWebClient.GetFoldersAsync();
+        var foundFolder = folders.Find(e => e.Id == folderId);
+        Assert.IsNotNull(foundFolder);
+        Assert.AreEqual(foundFolder.Name.ClearString, cryptString.ClearString);
+
+        folder = await VaultWebClient.GetFolderAsync(folder.Id.Value);
+        Assert.IsNotNull(folder?.Id);
+        Assert.AreEqual(folder?.Id, foundFolder.Id);
+
+        await VaultWebClient.DeleteFolderAsync(folder.Id.Value);
+
+        try
+        {
+            folder = await VaultWebClient.GetFolderAsync(folder.Id.Value);
+            Assert.IsNull("GetFolderAsync with an inexistant ID should throw!");
+        }
+        catch (Exception)
+        {
+        }
+    }
+
+    [TestMethod]
+    public async Task _0901_TestNotificationAsync()
     {
         var notificationClient = DatabaseSessionScope.ServiceProvider.GetRequiredService<INotificationClientService>();
         var cts = new CancellationTokenSource();

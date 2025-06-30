@@ -279,6 +279,18 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         return result;
     }
 
+    private async Task _MoveTrashAPIAsync(string apiPath)
+    {
+        var response = await _HttpClient.PutAsync($"{apiPath}", null);
+        response.EnsureSuccessStatusCode();
+    }
+
+    private async Task _RestoreAPIAsync(string apiPath)
+    {
+        var response = await _HttpClient.PutAsync($"{apiPath}", null);
+        response.EnsureSuccessStatusCode();
+    }
+
     private async Task _DeleteAPIAsync(string apiPath)
     {
         var response = await _HttpClient.DeleteAsync(apiPath);
@@ -583,6 +595,16 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         }
 
         throw new InvalidDataException($"Unhandled cipher item type: {cipherItem.ItemType}");
+    }
+
+    public async Task MoveToTrashCipherItemAsync(Guid id)
+    {
+        await _MoveTrashAPIAsync($"{_BaseUrl}{CiphersApiPath}/{id}/delete");
+    }
+
+    public async Task RestoreCipherItemAsync(Guid id)
+    {
+        await _RestoreAPIAsync($"{_BaseUrl}{CiphersApiPath}/{id}/restore");
     }
 
     public async Task DeleteCipherItemAsync(Guid id)
