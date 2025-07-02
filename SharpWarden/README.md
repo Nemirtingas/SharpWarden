@@ -13,9 +13,10 @@ A C# library to interact with the BitWarden/VaultWarden client API.
 
 Currently allows you to:
 
-- create/update/delete items
+- create/update/trash/restore/delete items
 - create/update/delete folders
 - create/delete attachments
+- create/delete organization collection
 - use the client web api
 - listen to notifications
 

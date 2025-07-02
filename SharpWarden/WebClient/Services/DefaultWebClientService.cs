@@ -15,6 +15,7 @@ using SharpWarden.BitWardenDatabaseSession.Models.ProfileItem;
 using SharpWarden.BitWardenDatabaseSession;
 using SharpWarden.BitWardenDatabaseSession.Services;
 using SharpWarden.WebClient.Exceptions;
+using SharpWarden.BitWardenDatabaseSession.Models.CollectionItem;
 
 namespace SharpWarden.WebClient.Services;
 
@@ -663,8 +664,36 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
     public async Task DeleteAllFolderAsync()
     {
-        var response = await _HttpClient.DeleteAsync($"{_BaseUrl}/api/folders/all");
+        var response = await _HttpClient.DeleteAsync($"{_BaseUrl}{FoldersApiPath}/all");
         response.EnsureSuccessStatusCode();
+    }
+
+    #endregion
+
+    #region Organization API
+
+    const string OrganizationsApiPath = "/api/organizations";
+
+    public async Task<CollectionItemModel> CreateCollectionAsync(Guid organizationId, string encryptedName, List<UserCollectionPermissionsModel> users, List<UserCollectionPermissionsModel> groups)
+    {
+        var apiModel = new CollectionCreateRequestAPIModel
+        {
+            Name = encryptedName,
+            Users = users,
+            Groups = groups
+        };
+
+        return await _CreateAPIAsync<CollectionItemModel, CollectionCreateRequestAPIModel>($"{_BaseUrl}{OrganizationsApiPath}/{organizationId}/collections", apiModel);
+    }
+
+    public async Task<List<CollectionItemModel>> GetCollectionsAsync(Guid organizationId)
+    {
+        return await _GetAPIAsync<List<CollectionItemModel>>($"{_BaseUrl}{OrganizationsApiPath}/{organizationId}/collections/details");
+    }
+
+    public async Task DeleteCollectionAsync(Guid organizationId, Guid collectionId)
+    {
+        await _DeleteAPIAsync($"{_BaseUrl}{OrganizationsApiPath}/{organizationId}/collections/{collectionId}");
     }
 
     #endregion

@@ -8,6 +8,7 @@ using SharpWarden.BitWardenDatabaseSession.Models;
 using SharpWarden.BitWardenDatabaseSession.Models.FolderItem;
 using SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
 using SharpWarden.BitWardenDatabaseSession.Models.ProfileItem;
+using SharpWarden.BitWardenDatabaseSession.Models.CollectionItem;
 
 namespace SharpWarden.WebClient.Services;
 
@@ -88,6 +89,12 @@ public interface IWebClientService
     public Task DeleteFoldersAsync(IEnumerable<Guid> ids);
 
     public Task DeleteAllFolderAsync();
+
+    public Task<CollectionItemModel> CreateCollectionAsync(Guid organizationId, string encryptedName, List<UserCollectionPermissionsModel> users, List<UserCollectionPermissionsModel> groups);
+
+    public Task<List<CollectionItemModel>> GetCollectionsAsync(Guid organizationId);
+
+    public Task DeleteCollectionAsync(Guid organizationId, Guid collectionId);
 
     public Task<Stream> GetAttachmentAsync(AttachmentModel attachment);
 

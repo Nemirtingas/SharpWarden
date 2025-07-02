@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpWarden;
 using SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
+using SharpWarden.BitWardenDatabaseSession.Models.CollectionItem;
 using SharpWarden.BitWardenDatabaseSession.Models.FolderItem;
 using SharpWarden.BitWardenDatabaseSession.Services;
 using SharpWarden.NotificationClient;
@@ -807,7 +808,7 @@ public sealed class SharpWardenTest
     [TestMethod]
     public async Task _0402_TestUserCreateFolderItemAsync()
     {
-        // TODO: Test for item existence before creating to not leave dangling tests
+        // TODO: Test for item existence before creating to not leave dangling tests 
 
         var cryptString = new EncryptedString(UserCryptoService);
         cryptString.ClearString = "TestDirectory";
@@ -844,6 +845,31 @@ public sealed class SharpWardenTest
         catch (Exception)
         {
         }
+    }
+
+    [TestMethod]
+    public async Task _0403_TestOrganizationCreateCollectionItemAsync()
+    {
+        // TODO: Test for item existence before creating to not leave dangling tests
+
+        var organizationCryptoService = OrganizationCryptoFactoryService.GetOrganizationCryptoService(Guid.Parse(TestOrganizationId));
+
+        var cryptString = new EncryptedString(organizationCryptoService);
+        cryptString.ClearString = "TestCollection";
+
+        var userProfile = VaultService.GetBitWardenDatabase().Profile;
+
+        var collection = await VaultWebClient.CreateCollectionAsync(Guid.Parse(TestOrganizationId), cryptString.CipherString, [new UserCollectionPermissionsModel
+        {
+            Id = userProfile.Organizations.First(e => e.Id == Guid.Parse(TestOrganizationId)).OrganizationUserId,
+            HidePasswords = false,
+            Manage = true,
+            ReadOnly = false,
+        }], null);
+        Assert.IsNotNull(collection);
+        Assert.AreEqual(collection.OrganizationId.Value, Guid.Parse(TestOrganizationId));
+
+        await VaultWebClient.DeleteCollectionAsync(Guid.Parse(TestOrganizationId), collection.Id.Value);
     }
 
     [TestMethod]

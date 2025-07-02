@@ -32,6 +32,8 @@ public enum ObjectType
     CipherDetails,
     [EnumMember(Value = "collectionDetails")]
     CollectionDetails,
+    [EnumMember(Value = "collectionAccessDetails")]
+    CollectionAccessDetails,
     [EnumMember(Value = "policy")]
     Policy,
     [EnumMember(Value = "sync")]
