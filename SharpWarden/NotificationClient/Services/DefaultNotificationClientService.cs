@@ -14,13 +14,15 @@ namespace SharpWarden.NotificationClient.Services;
 public class DefaultNotificationClientService : INotificationClientService, IDisposable
 {
     private readonly string _BaseUrl;
-    private readonly string _AccessToken;
+    private IWebClientService _WebClientService;
     private HubConnection _hubConnection;
 
-    public DefaultNotificationClientService(string baseUrl, string accessToken)
+    public DefaultNotificationClientService(
+        IWebClientService webClientService,
+        string baseUrl)
     {
+        _WebClientService = webClientService;
         _BaseUrl = baseUrl.TrimEnd('/');
-        _AccessToken = accessToken;
     }
 
     public event Func<PushNotificationBaseModel, Task> OnPushNotificationAsyncReceived;
@@ -32,7 +34,7 @@ public class DefaultNotificationClientService : INotificationClientService, IDis
         _hubConnection = new HubConnectionBuilder()
             .WithUrl(url, options =>
             {
-                options.AccessTokenProvider = () => Task.FromResult(_AccessToken);
+                options.AccessTokenProvider = () => Task.FromResult(_WebClientService.GetWebSession().AccessToken);
                 options.DefaultTransferFormat = Microsoft.AspNetCore.Connections.TransferFormat.Binary;
                 options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets;
                 options.SkipNegotiation = true;
