@@ -39,8 +39,7 @@ public static class BitWardenHelper
         });
         services.AddScoped<INotificationClientService, DefaultNotificationClientService>((services) =>
         {
-            var webClientService = services.GetRequiredService<IWebClientService>();
-            return new DefaultNotificationClientService(notificationUri, webClientService.GetWebSession().AccessToken);
+            return new DefaultNotificationClientService(services.GetRequiredService<IWebClientService>(), notificationUri);
         });
 
         return services.BuildServiceProvider().CreateScope();
