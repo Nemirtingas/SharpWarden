@@ -169,7 +169,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         }
 
         _WebSession = _Deserialize<LoginModel>(await response.Content.ReadAsStreamAsync());
-        ExpiresAt = responseAt.AddSeconds(-_WebSession.ExpiresIn - AuthTokenExpirationThreshold);
+        ExpiresAt = responseAt.AddSeconds(_WebSession.ExpiresIn - AuthTokenExpirationThreshold);
 
         _HttpClient.DefaultRequestHeaders.Remove("Bearer");
         _HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _WebSession.AccessToken);
@@ -193,7 +193,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         response.EnsureSuccessStatusCode();
 
         _WebSession.UpdateSession(_Deserialize<RefreshModel>(await response.Content.ReadAsStreamAsync()));
-        ExpiresAt = responseAt.AddSeconds(-_WebSession.ExpiresIn - AuthTokenExpirationThreshold);
+        ExpiresAt = responseAt.AddSeconds(_WebSession.ExpiresIn - AuthTokenExpirationThreshold);
 
         _HttpClient.DefaultRequestHeaders.Remove("Bearer");
         _HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _WebSession.AccessToken);
@@ -223,7 +223,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         response.EnsureSuccessStatusCode();
 
         _WebSession.UpdateSession(_Deserialize<ApiKeyLoginModel>(await response.Content.ReadAsStreamAsync()));
-        ExpiresAt = responseAt.AddSeconds(-_WebSession.ExpiresIn - AuthTokenExpirationThreshold);
+        ExpiresAt = responseAt.AddSeconds(_WebSession.ExpiresIn - AuthTokenExpirationThreshold);
 
         _HttpClient.DefaultRequestHeaders.Remove("Bearer");
         _HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _WebSession.AccessToken);
