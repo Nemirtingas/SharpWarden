@@ -152,8 +152,6 @@ public static class BitWardenHelper
         return sb.ToString();
     }
 
-    // Tes fonctions existantes:
-
     private static string ExportPrivateKeyToPem(AsymmetricKeyParameter privateKey)
     {
         using var sw = new StringWriter();
