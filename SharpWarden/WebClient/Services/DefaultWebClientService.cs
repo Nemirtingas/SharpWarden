@@ -570,7 +570,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         if (cipherItem.OrganizationId == null)
             throw new InvalidDataException($"{nameof(CipherItemModel.OrganizationId)} must be set.");
 
-        if (!(cipherItem.CollectionsIds?.Count > 0))
+        if (collectionIds?.Any() != true)
             throw new InvalidDataException($"{nameof(collectionIds)} must have at least 1 collection id.");
             
         switch (cipherItem.ItemType)
