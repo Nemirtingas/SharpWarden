@@ -28,6 +28,9 @@ public abstract class CipherItemBaseRequestAPIModel
     [JsonProperty("fields")]
     public List<CustomFieldAPIModel> Fields { get; set; }
 
+    [JsonProperty("passwordHistory")]
+    public List<PasswordHistoryAPIModel> PasswordHistory { get; set; }
+
     [JsonProperty("favorite")]
     public bool Favorite { get; set; }
 

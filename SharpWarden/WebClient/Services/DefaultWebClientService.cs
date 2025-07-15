@@ -328,8 +328,13 @@ public class DefaultWebClientService : IWebClientService, IDisposable
             Value = e.Value?.CipherString,
             LinkedId = e.LinkedId,
         }));
+        apiModel.PasswordHistory = itemModel.PasswordHistory == null ? null : new List<PasswordHistoryAPIModel>(itemModel.PasswordHistory.Select(e => new PasswordHistoryAPIModel
+        {
+            LastUsedDate = e.LastUsedDate,
+            Password = e.Password.CipherString
+        }));
         apiModel.Reprompt = itemModel.Reprompt;
-        apiModel.LastKnownRevisionDate = null;
+        apiModel.LastKnownRevisionDate = itemModel.RevisionDate;
     }
 
     private CipherItemLoginRequestAPIModel _BuildCipherItemLoginRequest(CipherItemModel itemModel)
@@ -436,7 +441,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         var apiModel = new CipherItemCreateRequestAPIModel<CipherItemLoginRequestAPIModel>
         {
             Cipher = _BuildCipherItemLoginRequest(cipherItem),
-            CollectionIds = collectionIds?.ToList()
+            CollectionIds = collectionIds?.ToList() ?? new()
         };
         return apiModel;
     }
@@ -446,7 +451,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         var apiModel = new CipherItemCreateRequestAPIModel<CipherItemSecureNoteRequestAPIModel>
         {
             Cipher = _BuildCipherItemSecureNoteRequest(cipherItem),
-            CollectionIds = collectionIds?.ToList()
+            CollectionIds = collectionIds?.ToList() ?? new()
         };
         return apiModel;
     }
@@ -456,7 +461,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         var apiModel = new CipherItemCreateRequestAPIModel<CipherItemCardRequestAPIModel>
         {
             Cipher = _BuildCipherItemCardRequest(cipherItem),
-            CollectionIds = collectionIds?.ToList()
+            CollectionIds = collectionIds?.ToList() ?? new()
         };
         return apiModel;
     }
@@ -466,7 +471,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         var apiModel = new CipherItemCreateRequestAPIModel<CipherItemIdentityRequestAPIModel>
         {
             Cipher = _BuildCipherItemIdentityRequest(cipherItem),
-            CollectionIds = collectionIds?.ToList()
+            CollectionIds = collectionIds?.ToList() ?? new()
         };
         return apiModel;
     }
@@ -476,7 +481,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         var apiModel = new CipherItemCreateRequestAPIModel<CipherItemSSHKeyRequestAPIModel>
         {
             Cipher = _BuildCipherItemSSHKeyRequest(cipherItem),
-            CollectionIds = collectionIds?.ToList()
+            CollectionIds = collectionIds?.ToList() ?? new()
         };
         return apiModel;
     }
@@ -589,10 +594,10 @@ public class DefaultWebClientService : IWebClientService, IDisposable
     {
         switch (cipherItem.ItemType)
         {
-            case CipherItemType.Login: return await _UpdateAPIAsync<CipherItemModel, CipherItemLoginRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", id, _BuildCipherItemLoginRequest(cipherItem));
+            case CipherItemType.Login     : return await _UpdateAPIAsync<CipherItemModel, CipherItemLoginRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", id, _BuildCipherItemLoginRequest(cipherItem));
             case CipherItemType.SecureNote: return await _UpdateAPIAsync<CipherItemModel, CipherItemSecureNoteRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", id, _BuildCipherItemSecureNoteRequest(cipherItem));
-            case CipherItemType.Card: return await _UpdateAPIAsync<CipherItemModel, CipherItemCardRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", id, _BuildCipherItemCardRequest(cipherItem));
-            case CipherItemType.Identity: return await _UpdateAPIAsync<CipherItemModel, CipherItemIdentityRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", id, _BuildCipherItemIdentityRequest(cipherItem));
+            case CipherItemType.Card      : return await _UpdateAPIAsync<CipherItemModel, CipherItemCardRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", id, _BuildCipherItemCardRequest(cipherItem));
+            case CipherItemType.Identity  : return await _UpdateAPIAsync<CipherItemModel, CipherItemIdentityRequestAPIModel>($"{_BaseUrl}{CiphersApiPath}", id, _BuildCipherItemIdentityRequest(cipherItem));
         }
 
         throw new InvalidDataException($"Unhandled cipher item type: {cipherItem.ItemType}");
