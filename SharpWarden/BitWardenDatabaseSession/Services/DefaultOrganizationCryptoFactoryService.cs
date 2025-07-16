@@ -7,21 +7,21 @@ namespace SharpWarden.BitWardenDatabaseSession.Services;
 
 public class DefaultOrganizationCryptoFactoryService : IOrganizationCryptoFactoryService
 {
-    private readonly IKeyProviderService _KeyProviderService;
-    private readonly Dictionary<Guid, IUserCryptoService> _Cache = new();
+    private readonly IKeyProviderService _keyProviderService;
+    private readonly Dictionary<Guid, IUserCryptoService> _cache = new();
 
     public DefaultOrganizationCryptoFactoryService(IKeyProviderService keyProviderService)
     {
-        _KeyProviderService = keyProviderService;
+        _keyProviderService = keyProviderService;
     }
 
     public IUserCryptoService GetOrganizationCryptoService(Guid organizationId)
     {
-        if (!_Cache.TryGetValue(organizationId, out var organizationService))
+        if (!_cache.TryGetValue(organizationId, out var organizationService))
         {
-            _KeyProviderService.GetUserKeys(organizationId);
-            organizationService = new OrganizationCryptoService(_KeyProviderService, organizationId);
-            _Cache.Add(organizationId, organizationService);
+            _keyProviderService.GetUserKeys(organizationId);
+            organizationService = new OrganizationCryptoService(_keyProviderService, organizationId);
+            _cache.Add(organizationId, organizationService);
         }
 
         return organizationService;

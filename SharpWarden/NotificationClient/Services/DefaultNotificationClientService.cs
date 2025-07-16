@@ -14,37 +14,37 @@ namespace SharpWarden.NotificationClient.Services;
 
 public class DefaultNotificationClientService : INotificationClientService, IDisposable
 {
-    private readonly string _BaseUrl;
-    private IWebClientService _WebClientService;
+    private readonly string _baseUrl;
+    private readonly IWebClientService _webClientService;
     private HubConnection _hubConnection;
 
     public DefaultNotificationClientService(
         IWebClientService webClientService,
         string baseUrl)
     {
-        _WebClientService = webClientService;
-        _BaseUrl = baseUrl.TrimEnd('/');
+        _webClientService = webClientService;
+        _baseUrl = baseUrl.TrimEnd('/');
     }
 
     public event Func<PushNotificationBaseModel, Task> OnPushNotificationAsyncReceived;
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
-        var url = $"{_BaseUrl}/hub";
+        var url = $"{_baseUrl}/hub";
 
         _hubConnection = new HubConnectionBuilder()
             .WithUrl(url, options =>
             {
-                options.AccessTokenProvider = () => Task.FromResult(_WebClientService.GetWebSession().AccessToken);
+                options.AccessTokenProvider = () => Task.FromResult(_webClientService.GetWebSession().AccessToken);
                 options.DefaultTransferFormat = Microsoft.AspNetCore.Connections.TransferFormat.Binary;
                 options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets;
                 options.SkipNegotiation = true;
             })
             .AddMessagePackProtocol(options =>
             {
-                options.SerializerOptions = MessagePack.MessagePackSerializerOptions.Standard
+                options.SerializerOptions = MessagePackSerializerOptions.Standard
                     .WithResolver(ContractlessStandardResolver.Instance)
-                    .WithCompression(MessagePack.MessagePackCompression.Lz4BlockArray);
+                    .WithCompression(MessagePackCompression.Lz4BlockArray);
             })
             .Build();
 
@@ -136,10 +136,10 @@ public class DefaultNotificationClientService : INotificationClientService, IDis
                         break;
                 }
 
-                await OnPushNotificationAsyncReceived?.Invoke(message);
+                await (OnPushNotificationAsyncReceived?.Invoke(message)!).ConfigureAwait(false);
             });
 
-        await _hubConnection.StartAsync(cancellationToken);
+        await _hubConnection.StartAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task StopAsync()
@@ -147,8 +147,8 @@ public class DefaultNotificationClientService : INotificationClientService, IDis
         ResetEventSubscribers();
         if (_hubConnection != null)
         {
-            await _hubConnection.StopAsync();
-            await _hubConnection.DisposeAsync();
+            await _hubConnection.StopAsync().ConfigureAwait(false);
+            await _hubConnection.DisposeAsync().ConfigureAwait(false);
         }
     }
 

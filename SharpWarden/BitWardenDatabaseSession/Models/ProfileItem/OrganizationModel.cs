@@ -104,7 +104,7 @@ public class OrganizationModel
     public bool SelfHost { get; set; }
 
     [JsonProperty("SsoBound")]
-    public bool SSOBound { get; set; }
+    public bool SsoBound { get; set; }
 
     [JsonProperty("status")]
     public int Status { get; set; }
@@ -113,13 +113,13 @@ public class OrganizationModel
     public int Type { get; set; }
 
     [JsonProperty("use2fa")]
-    public bool Use2FA { get; set; }
+    public bool Use2Fa { get; set; }
 
     [JsonProperty("useActivateAutofillPolicy")]
     public bool UseActivateAutofillPolicy { get; set; }
 
     [JsonProperty("useApi")]
-    public bool UseAPI { get; set; }
+    public bool UseApi { get; set; }
 
     [JsonProperty("useCustomPermissions")]
     public bool UseCustomPermissions { get; set; }
@@ -146,16 +146,16 @@ public class OrganizationModel
     public bool UseResetPassword { get; set; }
 
     [JsonProperty("useScim")]
-    public bool UseSCIM { get; set; }
+    public bool UseScim { get; set; }
 
     [JsonProperty("useSecretsManager")]
     public bool UseSecretsManager { get; set; }
 
     [JsonProperty("useSso")]
-    public bool UseSSO { get; set; }
+    public bool UseSso { get; set; }
 
     [JsonProperty("useTotp")]
-    public bool UseTOTP { get; set; }
+    public bool UseTotp { get; set; }
 
     [JsonProperty("userId")]
     public Guid UserId { get; set; }

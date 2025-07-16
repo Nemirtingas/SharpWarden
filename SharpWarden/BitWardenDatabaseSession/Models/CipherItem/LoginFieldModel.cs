@@ -10,7 +10,7 @@ namespace SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
 
 public class LoginFieldModel : ISessionAware
 {
-    private IUserCryptoService _CryptoService;
+    private IUserCryptoService _cryptoService;
 
     public LoginFieldModel()
     {
@@ -21,20 +21,20 @@ public class LoginFieldModel : ISessionAware
         SetCryptoService(cryptoService);
     }
 
-    public bool HasSession() => _CryptoService != null;
+    public bool HasSession() => _cryptoService != null;
 
     public void SetCryptoService(IUserCryptoService cryptoService)
     {
-        _CryptoService = cryptoService;
+        _cryptoService = cryptoService;
 
-        Password?.SetCryptoService(_CryptoService);
-        Uri?.SetCryptoService(_CryptoService);
-        TOTP?.SetCryptoService(_CryptoService);
-        Username?.SetCryptoService(_CryptoService);
+        Password?.SetCryptoService(_cryptoService);
+        Uri?.SetCryptoService(_cryptoService);
+        Totp?.SetCryptoService(_cryptoService);
+        Username?.SetCryptoService(_cryptoService);
 
         if (Uris != null)
             foreach (var uri in Uris)
-                uri.SetCryptoService(_CryptoService);
+                uri.SetCryptoService(_cryptoService);
     }
 
     [JsonProperty("autofillOnPageLoad")]
@@ -47,7 +47,7 @@ public class LoginFieldModel : ISessionAware
     public DateTime? PasswordRevisionDate { get; set; }
 
     [JsonProperty("totp")]
-    public EncryptedString TOTP { get; set; }
+    public EncryptedString Totp { get; set; }
 
     [JsonProperty("uri")]
     public EncryptedString Uri { get; set; }

@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
@@ -94,7 +95,7 @@ class Example
         PrintCipherField(model.PassportNumber);
         PrintCipherField(model.Phone);
         PrintCipherField(model.PostalCode);
-        PrintCipherField(model.SSN);
+        PrintCipherField(model.SecuritySocialNumber);
         PrintCipherField(model.State);
         PrintCipherField(model.Title);
         PrintCipherField(model.Username);
@@ -187,7 +188,7 @@ class Example
         var folder = VaultService.GetBitWardenDatabase().Folders.Find(e => e.Id == item.FolderId)?.Name.ClearString;
         if (folder != null)
             folder = "/" + folder;
-        
+
         Console.WriteLine("================================");
         Console.WriteLine($"Item: {folder}/{item.Id}");
 
@@ -251,25 +252,15 @@ class Example
         }
     }
 
-    static async Task TestCipherItemAsync()
+    static async Task TestCipherItemAttachmentAsync()
     {
-        var item = await VaultWebClient.GetCipherItemAsync(Guid.Parse("cb3bb34b-6491-4ded-b256-3cc9f76c975f"));
-
-        var attachment = item.Attachments[0];
-        var attachmentStream = await VaultWebClient.GetAttachmentAsync(attachment);
-        
-        var clearStream = new MemoryStream();
-
-        await VaultService.DecryptAttachmentAsync(attachmentStream, attachment.Key.ClearBytes, clearStream);
-        clearStream.Position = 0; 
-        
         using var fileStream = new FileStream("new_file", FileMode.Open, FileAccess.Read);
-        
+
         var attachmentKey = RandomNumberGenerator.GetBytes(64);
-        
+
         var encryptedName = UserCryptoService.NewEncryptedString();
         encryptedName.ClearString = "test.txt";
-        
+
         var encryptedKey = UserCryptoService.NewEncryptedString();
         encryptedKey.ClearBytes = attachmentKey;
 

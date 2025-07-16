@@ -10,17 +10,14 @@ namespace SharpWarden.BitWardenDatabaseSession.Services;
 
 public class DefaultSessionJsonConverterService : ISessionJsonConverterService
 {
-    private readonly IUserCryptoService _CryptoService;
     private readonly JsonSerializer _serializer;
 
     public DefaultSessionJsonConverterService(
         IUserCryptoService cryptoService)
     {
-        _CryptoService = cryptoService;
-
         var settings = new JsonSerializerSettings
         {
-            ContractResolver = new SessionAwareContractResolver(_CryptoService),
+            ContractResolver = new SessionAwareContractResolver(cryptoService),
             NullValueHandling = NullValueHandling.Ignore,
             MissingMemberHandling = MissingMemberHandling.Ignore
         };
@@ -37,14 +34,14 @@ public class DefaultSessionJsonConverterService : ISessionJsonConverterService
 
     private T _Deserialize<T>(TextReader reader)
     {
-        using (var jsonTextReader = new JsonTextReader(reader))
-            return _serializer.Deserialize<T>(jsonTextReader);
+        using var jsonTextReader = new JsonTextReader(reader);
+        return _serializer.Deserialize<T>(jsonTextReader);
     }
 
     private void _Serialize(object obj, TextWriter writer)
     {
-        using (var jsonTextWriter = new JsonTextWriter(writer))
-            _serializer.Serialize(jsonTextWriter, obj);
+        using var jsonTextWriter = new JsonTextWriter(writer);
+        _serializer.Serialize(jsonTextWriter, obj);
     }
 
     public T Deserialize<T>(string json)
@@ -55,10 +52,8 @@ public class DefaultSessionJsonConverterService : ISessionJsonConverterService
 
     public string Serialize(object obj)
     {
-        using (var sw = new StringWriter())
-        {
-            _Serialize(obj, sw);
-            return sw.ToString();
-        }
+        using var sw = new StringWriter();
+        _Serialize(obj, sw);
+        return sw.ToString();
     }
 }

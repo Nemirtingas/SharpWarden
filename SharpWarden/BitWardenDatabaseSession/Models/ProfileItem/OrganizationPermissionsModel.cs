@@ -37,10 +37,10 @@ public class OrganizationPermissionsModel
     public bool ManageResetPassword { get; set; }
 
     [JsonProperty("manageScim")]
-    public bool ManageSCIM { get; set; }
+    public bool ManageScim { get; set; }
 
     [JsonProperty("manageSso")]
-    public bool ManageSSO { get; set; }
+    public bool ManageSso { get; set; }
 
     [JsonProperty("manageUsers")]
     public bool ManageUsers { get; set; }

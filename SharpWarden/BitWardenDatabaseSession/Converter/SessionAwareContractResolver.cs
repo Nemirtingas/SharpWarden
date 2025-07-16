@@ -11,11 +11,11 @@ namespace SharpWarden.BitWardenDatabaseSession.Converter;
 
 public class SessionAwareContractResolver : DefaultContractResolver
 {
-    private readonly IUserCryptoService _CryptoService;
+    private readonly IUserCryptoService _cryptoService;
 
     public SessionAwareContractResolver(IUserCryptoService cryptoService)
     {
-        _CryptoService = cryptoService;
+        _cryptoService = cryptoService;
     }
 
     protected override JsonContract CreateContract(Type objectType)
@@ -25,7 +25,7 @@ public class SessionAwareContractResolver : DefaultContractResolver
         if (typeof(ISessionAware).IsAssignableFrom(objectType))
         {
             var converterType = typeof(SessionAwareConverter<>).MakeGenericType(objectType);
-            contract.Converter = (JsonConverter)Activator.CreateInstance(converterType, _CryptoService)!;
+            contract.Converter = (JsonConverter)Activator.CreateInstance(converterType, _cryptoService)!;
         }
 
         return contract;

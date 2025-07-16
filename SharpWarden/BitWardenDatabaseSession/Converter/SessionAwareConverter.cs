@@ -10,11 +10,11 @@ namespace SharpWarden.BitWardenDatabaseSession.Converter;
 
 public class SessionAwareConverter<T> : JsonConverter where T : ISessionAware
 {
-    private readonly IUserCryptoService _CryptoService;
+    private readonly IUserCryptoService _cryptoService;
 
     public SessionAwareConverter(IUserCryptoService cryptoService)
     {
-        _CryptoService = cryptoService;
+        _cryptoService = cryptoService;
     }
 
     public override bool CanConvert(Type objectType) => typeof(T).IsAssignableFrom(objectType);
@@ -31,7 +31,7 @@ public class SessionAwareConverter<T> : JsonConverter where T : ISessionAware
             newSerializer.Converters.Add(converter);
 
         var obj = newSerializer.Deserialize<T>(reader);
-        obj?.SetCryptoService(_CryptoService);
+        obj?.SetCryptoService(_cryptoService);
         return obj!;
     }
 

@@ -8,28 +8,28 @@ using SharpWarden.BitWardenDatabaseSession.Services;
 
 namespace SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
 
-public class SSHKeyFieldModel : ISessionAware
+public class SshKeyFieldModel : ISessionAware
 {
-    private IUserCryptoService _CryptoService;
+    private IUserCryptoService _cryptoService;
 
-    public SSHKeyFieldModel()
+    public SshKeyFieldModel()
     {
     }
 
-    public SSHKeyFieldModel(IUserCryptoService cryptoService)
+    public SshKeyFieldModel(IUserCryptoService cryptoService)
     {
         SetCryptoService(cryptoService);
     }
 
-    public bool HasSession() => _CryptoService != null;
+    public bool HasSession() => _cryptoService != null;
 
     public void SetCryptoService(IUserCryptoService cryptoService)
     {
-        _CryptoService = cryptoService;
+        _cryptoService = cryptoService;
 
-        KeyFingerprint?.SetCryptoService(_CryptoService);
-        PrivateKey?.SetCryptoService(_CryptoService);
-        PublicKey?.SetCryptoService(_CryptoService);
+        KeyFingerprint?.SetCryptoService(_cryptoService);
+        PrivateKey?.SetCryptoService(_cryptoService);
+        PublicKey?.SetCryptoService(_cryptoService);
     }
 
     [JsonProperty("keyFingerprint")]

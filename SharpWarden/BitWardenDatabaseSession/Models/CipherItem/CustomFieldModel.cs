@@ -8,9 +8,9 @@ using SharpWarden.BitWardenDatabaseSession.Services;
 
 namespace SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
 
-public class CustomFieldModel
+public class CustomFieldModel : ISessionAware
 {
-    private IUserCryptoService _CryptoService;
+    private IUserCryptoService _cryptoService;
 
     public CustomFieldModel()
     {
@@ -21,14 +21,14 @@ public class CustomFieldModel
         SetCryptoService(cryptoService);
     }
 
-    public bool HasSession() => _CryptoService != null;
+    public bool HasSession() => _cryptoService != null;
 
     public void SetCryptoService(IUserCryptoService cryptoService)
     {
-        _CryptoService = cryptoService;
+        _cryptoService = cryptoService;
 
-        Name?.SetCryptoService(_CryptoService);
-        Value?.SetCryptoService(_CryptoService);
+        Name?.SetCryptoService(_cryptoService);
+        Value?.SetCryptoService(_cryptoService);
     }
 
     [JsonProperty("linkedId")]

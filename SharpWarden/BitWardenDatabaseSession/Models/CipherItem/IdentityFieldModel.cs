@@ -10,7 +10,7 @@ namespace SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
 
 public class IdentityFieldModel : ISessionAware
 {
-    private IUserCryptoService _CryptoService;
+    private IUserCryptoService _cryptoService;
 
     public IdentityFieldModel()
     {
@@ -21,30 +21,30 @@ public class IdentityFieldModel : ISessionAware
         SetCryptoService(cryptoService);
     }
 
-    public bool HasSession() => _CryptoService != null;
+    public bool HasSession() => _cryptoService != null;
 
     public void SetCryptoService(IUserCryptoService cryptoService)
     {
-        _CryptoService = cryptoService;
+        _cryptoService = cryptoService;
 
-        Address1?.SetCryptoService(_CryptoService);
-        Address2?.SetCryptoService(_CryptoService);
-        Address3?.SetCryptoService(_CryptoService);
-        City?.SetCryptoService(_CryptoService);
-        Company?.SetCryptoService(_CryptoService);
-        Country?.SetCryptoService(_CryptoService);
-        Email?.SetCryptoService(_CryptoService);
-        FirstName?.SetCryptoService(_CryptoService);
-        LastName?.SetCryptoService(_CryptoService);
-        Username?.SetCryptoService(_CryptoService);
-        LicenseNumber?.SetCryptoService(_CryptoService);
-        MiddleName?.SetCryptoService(_CryptoService);
-        PassportNumber?.SetCryptoService(_CryptoService);
-        Phone?.SetCryptoService(_CryptoService);
-        PostalCode?.SetCryptoService(_CryptoService);
-        SSN?.SetCryptoService(_CryptoService);
-        State?.SetCryptoService(_CryptoService);
-        Title?.SetCryptoService(_CryptoService);
+        Address1?.SetCryptoService(_cryptoService);
+        Address2?.SetCryptoService(_cryptoService);
+        Address3?.SetCryptoService(_cryptoService);
+        City?.SetCryptoService(_cryptoService);
+        Company?.SetCryptoService(_cryptoService);
+        Country?.SetCryptoService(_cryptoService);
+        Email?.SetCryptoService(_cryptoService);
+        FirstName?.SetCryptoService(_cryptoService);
+        LastName?.SetCryptoService(_cryptoService);
+        Username?.SetCryptoService(_cryptoService);
+        LicenseNumber?.SetCryptoService(_cryptoService);
+        MiddleName?.SetCryptoService(_cryptoService);
+        PassportNumber?.SetCryptoService(_cryptoService);
+        Phone?.SetCryptoService(_cryptoService);
+        PostalCode?.SetCryptoService(_cryptoService);
+        SecuritySocialNumber?.SetCryptoService(_cryptoService);
+        State?.SetCryptoService(_cryptoService);
+        Title?.SetCryptoService(_cryptoService);
     }
 
     [JsonProperty("address1")]
@@ -90,7 +90,7 @@ public class IdentityFieldModel : ISessionAware
     public EncryptedString PostalCode { get; set; }
 
     [JsonProperty("ssn")]
-    public EncryptedString SSN { get; set; }
+    public EncryptedString SecuritySocialNumber { get; set; }
 
     [JsonProperty("state")]
     public EncryptedString State { get; set; }

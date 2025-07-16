@@ -10,7 +10,7 @@ namespace SharpWarden.BitWardenDatabaseSession.Models.CollectionItem;
 
 public class CollectionItemModel : ISessionAware
 {
-    private ConditionalCryptoService _ConditionalCryptoService;
+    private ConditionalCryptoService _conditionalCryptoService;
 
     public CollectionItemModel()
     {
@@ -21,17 +21,14 @@ public class CollectionItemModel : ISessionAware
         SetCryptoService(cryptoService);
     }
 
-    public bool HasSession() => _ConditionalCryptoService != null;
+    public bool HasSession() => _conditionalCryptoService != null;
 
     public void SetCryptoService(IUserCryptoService cryptoService)
     {
-        if (_ConditionalCryptoService == null)
-        {
-            _ConditionalCryptoService = new ConditionalCryptoService(cryptoService.KeyProviderService, () => this.OrganizationId);
-        }
-        _ConditionalCryptoService.CryptoService = cryptoService;
+        _conditionalCryptoService ??= new ConditionalCryptoService(cryptoService.KeyProviderService, () => this.OrganizationId);
+        _conditionalCryptoService.CryptoService = cryptoService;
 
-        Name?.SetCryptoService(_ConditionalCryptoService);
+        Name?.SetCryptoService(_conditionalCryptoService);
     }
 
     [JsonProperty("externalId")]

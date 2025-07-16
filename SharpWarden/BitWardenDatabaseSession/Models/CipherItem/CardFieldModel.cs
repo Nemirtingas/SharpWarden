@@ -10,7 +10,7 @@ namespace SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
 
 public class CardFieldModel : ISessionAware
 {
-    private IUserCryptoService _CryptoService;
+    private IUserCryptoService _cryptoService;
 
     public CardFieldModel()
     {
@@ -21,18 +21,18 @@ public class CardFieldModel : ISessionAware
         SetCryptoService(cryptoService);
     }
 
-    public bool HasSession() => _CryptoService != null;
+    public bool HasSession() => _cryptoService != null;
 
     public void SetCryptoService(IUserCryptoService cryptoService)
     {
-        _CryptoService = cryptoService;
+        _cryptoService = cryptoService;
 
-        CardholderName?.SetCryptoService(_CryptoService);
-        Brand?.SetCryptoService(_CryptoService);
-        Number?.SetCryptoService(_CryptoService);
-        ExpMonth?.SetCryptoService(_CryptoService);
-        ExpYear?.SetCryptoService(_CryptoService);
-        Code?.SetCryptoService(_CryptoService);
+        CardholderName?.SetCryptoService(_cryptoService);
+        Brand?.SetCryptoService(_cryptoService);
+        Number?.SetCryptoService(_cryptoService);
+        ExpMonth?.SetCryptoService(_cryptoService);
+        ExpYear?.SetCryptoService(_cryptoService);
+        Code?.SetCryptoService(_cryptoService);
     }
 
     [JsonProperty("cardholderName")]

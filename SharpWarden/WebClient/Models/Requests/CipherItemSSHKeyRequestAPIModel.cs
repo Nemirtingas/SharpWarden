@@ -11,7 +11,7 @@ namespace SharpWarden.WebClient.Models;
 public class CipherItemSSHKeyRequestAPIModel : CipherItemBaseRequestAPIModel
 {
     [JsonProperty("type")]
-    public override CipherItemType ItemType => CipherItemType.SSHKey;
+    public override CipherItemType ItemType => CipherItemType.SshKey;
 
     [JsonProperty("sshKey")]
     public CipherSSHKeyAPIModel SSHKey { get; set; }

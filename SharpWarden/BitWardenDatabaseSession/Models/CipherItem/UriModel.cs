@@ -10,7 +10,7 @@ namespace SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
 
 public class UriModel
 {
-    private IUserCryptoService _CryptoService;
+    private IUserCryptoService _cryptoService;
 
     public UriModel()
     {
@@ -21,14 +21,14 @@ public class UriModel
         SetCryptoService(cryptoService);
     }
 
-    public bool HasSession() => _CryptoService != null;
+    public bool HasSession() => _cryptoService != null;
 
     public void SetCryptoService(IUserCryptoService cryptoService)
     {
-        _CryptoService = cryptoService;
+        _cryptoService = cryptoService;
 
-        Uri?.SetCryptoService(_CryptoService);
-        UriChecksum?.SetCryptoService(_CryptoService);
+        Uri?.SetCryptoService(_cryptoService);
+        UriChecksum?.SetCryptoService(_cryptoService);
     }
 
     [JsonProperty("match")]

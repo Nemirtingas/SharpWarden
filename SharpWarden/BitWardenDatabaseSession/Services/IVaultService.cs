@@ -15,14 +15,14 @@ public interface IVaultService
     /// <param name="database"></param>
     void ReloadBitWardenDatabase(DatabaseModel database);
     /// <summary>
-    /// This will load a database, presumably downloaded via the <see cref="WebClient.WebClient.GetDatabaseAsync"/>.
+    /// This will load a database, presumably downloaded via the <see cref="WebClient.Services.IWebClientService.GetDatabaseAsync"/>.
     /// </summary>
     /// <param name="userPassword"></param>
     /// <param name="kdfIterations"></param>
     /// <param name="stream">The stream must be Json convertible to <see cref="DatabaseModel"/></param>
     void LoadBitWardenDatabase(byte[] userPassword, int kdfIterations, Stream stream);
     /// <summary>
-    /// This will load a database, presumably downloaded via the <see cref="WebClient.WebClient.GetDatabaseAsync"/>.
+    /// This will load a database, presumably downloaded via the <see cref="WebClient.Services.IWebClientService.GetDatabaseAsync"/>.
     /// </summary>
     /// <param name="userPassword"></param>
     /// <param name="kdfIterations"></param>
@@ -34,7 +34,7 @@ public interface IVaultService
     /// <returns></returns>
     DatabaseModel GetBitWardenDatabase();
     /// <summary>
-    /// Decrypt an already downloaded attachment. <see cref="WebClient.WebClient.GetAttachmentAsync"/>
+    /// Decrypt an already downloaded attachment. <see cref="WebClient.Services.IWebClientService.GetAttachmentAsync"/>
     /// </summary>
     /// <param name="cryptedAttachment"></param>
     /// <param name="key"></param>

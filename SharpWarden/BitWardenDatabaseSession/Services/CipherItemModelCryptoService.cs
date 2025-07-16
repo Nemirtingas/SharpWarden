@@ -7,7 +7,7 @@ namespace SharpWarden.BitWardenDatabaseSession.Services;
 
 public class ConditionalCryptoService : DefaultCryptoService, IUserCryptoService
 {
-    private Func<Guid?> _OrganizationIdSelector;
+    private readonly Func<Guid?> _organizationIdSelector;
     public ICryptoService CryptoService { get; set; }
 
     public ConditionalCryptoService(
@@ -15,38 +15,38 @@ public class ConditionalCryptoService : DefaultCryptoService, IUserCryptoService
         Func<Guid?> organizationIdSelector):
         base(keyProviderService)
     {
-        _OrganizationIdSelector = organizationIdSelector;
+        _organizationIdSelector = organizationIdSelector;
     }
 
-    public string GetClearStringWithRSAKey(string cipherString)
-        => GetClearStringWithRSAKey(_OrganizationIdSelector(), cipherString);
+    public string GetClearStringWithRsaKey(string cipherString)
+        => GetClearStringWithRsaKey(_organizationIdSelector(), cipherString);
 
     public string GetClearStringWithMasterKey(string cipherString)
-        => GetClearStringWithMasterKey(_OrganizationIdSelector(), cipherString);
+        => GetClearStringWithMasterKey(_organizationIdSelector(), cipherString);
 
     public string GetClearStringAuto(string cipherString)
-        => GetClearStringAuto(_OrganizationIdSelector(), cipherString);
+        => GetClearStringAuto(_organizationIdSelector(), cipherString);
 
-    public byte[] GetClearBytesWithRSAKey(string cipherString)
-        => GetClearBytesWithRSAKey(_OrganizationIdSelector(), cipherString);
+    public byte[] GetClearBytesWithRsaKey(string cipherString)
+        => GetClearBytesWithRsaKey(_organizationIdSelector(), cipherString);
 
     public byte[] GetClearBytesWithMasterKey(string cipherString)
-        => GetClearBytesWithMasterKey(_OrganizationIdSelector(), cipherString);
+        => GetClearBytesWithMasterKey(_organizationIdSelector(), cipherString);
 
     public byte[] GetClearBytesAuto(string cipherString)
-        => GetClearBytesAuto(_OrganizationIdSelector(), cipherString);
+        => GetClearBytesAuto(_organizationIdSelector(), cipherString);
 
-    public string CryptClearStringWithRSAKey(string clearString)
-        => CryptClearStringWithRSAKey(_OrganizationIdSelector(), clearString);
+    public string CryptClearStringWithRsaKey(string clearString)
+        => CryptClearStringWithRsaKey(_organizationIdSelector(), clearString);
 
     public string CryptClearStringWithMasterKey(string clearString)
-        => CryptClearStringWithMasterKey(_OrganizationIdSelector(), clearString);
+        => CryptClearStringWithMasterKey(_organizationIdSelector(), clearString);
 
-    public string CryptClearBytesWithRSAKey(byte[] bytes)
-        => CryptClearBytesWithRSAKey(_OrganizationIdSelector(), bytes);
+    public string CryptClearBytesWithRsaKey(byte[] bytes)
+        => CryptClearBytesWithRsaKey(_organizationIdSelector(), bytes);
 
     public string CryptClearBytesWithMasterKey(byte[] bytes)
-        => CryptClearBytesWithMasterKey(_OrganizationIdSelector(), bytes);
+        => CryptClearBytesWithMasterKey(_organizationIdSelector(), bytes);
 
     public EncryptedString NewEncryptedString()
     {

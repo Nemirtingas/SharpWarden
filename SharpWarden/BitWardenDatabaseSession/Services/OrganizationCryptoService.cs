@@ -7,45 +7,45 @@ namespace SharpWarden.BitWardenDatabaseSession.Services;
 
 public class OrganizationCryptoService : DefaultCryptoService, IUserCryptoService
 {
-    private readonly Guid? _OrganizationId;
+    private readonly Guid? _organizationId;
 
     public OrganizationCryptoService(
         IKeyProviderService keyProviderService,
         Guid? organizationId) :
         base(keyProviderService)
     {
-        _OrganizationId = organizationId;
+        _organizationId = organizationId;
     }
 
-    public string GetClearStringWithRSAKey(string cipherString)
-        => GetClearStringWithRSAKey(_OrganizationId, cipherString);
+    public string GetClearStringWithRsaKey(string cipherString)
+        => GetClearStringWithRsaKey(_organizationId, cipherString);
 
     public string GetClearStringWithMasterKey(string cipherString)
-        => GetClearStringWithMasterKey(_OrganizationId, cipherString);
+        => GetClearStringWithMasterKey(_organizationId, cipherString);
 
     public string GetClearStringAuto(string cipherString)
-        => GetClearStringAuto(_OrganizationId, cipherString);
+        => GetClearStringAuto(_organizationId, cipherString);
 
-    public byte[] GetClearBytesWithRSAKey(string cipherString)
-        => GetClearBytesWithRSAKey(_OrganizationId, cipherString);
+    public byte[] GetClearBytesWithRsaKey(string cipherString)
+        => GetClearBytesWithRsaKey(_organizationId, cipherString);
 
     public byte[] GetClearBytesWithMasterKey(string cipherString)
-        => GetClearBytesWithMasterKey(_OrganizationId, cipherString);
+        => GetClearBytesWithMasterKey(_organizationId, cipherString);
 
     public byte[] GetClearBytesAuto(string cipherString)
-        => GetClearBytesAuto(_OrganizationId, cipherString);
+        => GetClearBytesAuto(_organizationId, cipherString);
 
-    public string CryptClearStringWithRSAKey(string clearString)
-        => CryptClearStringWithRSAKey(_OrganizationId, clearString);
+    public string CryptClearStringWithRsaKey(string clearString)
+        => CryptClearStringWithRsaKey(_organizationId, clearString);
 
     public string CryptClearStringWithMasterKey(string clearString)
-        => CryptClearStringWithMasterKey(_OrganizationId, clearString);
+        => CryptClearStringWithMasterKey(_organizationId, clearString);
 
-    public string CryptClearBytesWithRSAKey(byte[] bytes)
-        => CryptClearBytesWithRSAKey(_OrganizationId, bytes);
+    public string CryptClearBytesWithRsaKey(byte[] bytes)
+        => CryptClearBytesWithRsaKey(_organizationId, bytes);
 
     public string CryptClearBytesWithMasterKey(byte[] bytes)
-        => CryptClearBytesWithMasterKey(_OrganizationId, bytes);
+        => CryptClearBytesWithMasterKey(_organizationId, bytes);
 
     public EncryptedString NewEncryptedString()
     {

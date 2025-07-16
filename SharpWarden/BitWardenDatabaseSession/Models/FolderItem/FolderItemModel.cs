@@ -10,7 +10,7 @@ namespace SharpWarden.BitWardenDatabaseSession.Models.FolderItem;
 
 public class FolderItemModel : ISessionAware
 {
-    private IUserCryptoService _CryptoService;
+    private IUserCryptoService _cryptoService;
 
     public FolderItemModel()
     {
@@ -21,13 +21,13 @@ public class FolderItemModel : ISessionAware
         SetCryptoService(cryptoService);
     }
 
-    public bool HasSession() => _CryptoService != null;
+    public bool HasSession() => _cryptoService != null;
 
     public void SetCryptoService(IUserCryptoService cryptoService)
     {
-        _CryptoService = cryptoService;
+        _cryptoService = cryptoService;
 
-        Name?.SetCryptoService(_CryptoService);
+        Name?.SetCryptoService(_cryptoService);
     }
 
     [JsonProperty("id")]

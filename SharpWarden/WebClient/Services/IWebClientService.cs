@@ -33,6 +33,13 @@ public interface IWebClientService
 
     public Task AuthenticateAsync(string password);
 
+    /// <summary>
+    /// </summary>
+    /// <param name="password"></param>
+    /// <param name="newDeviceOtpAsyncCallback">A callback that will be run if a device OTP is needed to login.</param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    /// <exception cref="BitWardenHttpRequestException"></exception>
     public Task AuthenticateAsync(string password, Func<Task<string>> newDeviceOtpAsyncCallback);
 
     public Task AuthenticateWithRefreshTokenAsync(string refreshToken);

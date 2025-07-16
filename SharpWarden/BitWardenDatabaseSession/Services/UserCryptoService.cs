@@ -5,15 +5,15 @@
 
 namespace SharpWarden.BitWardenDatabaseSession.Services;
 
-public class UserCryptoService : DefaultCryptoService, IUserCryptoService, ICryptoService
+public class UserCryptoService : DefaultCryptoService, IUserCryptoService
 {
     public UserCryptoService(IKeyProviderService keyProviderService) :
         base(keyProviderService)
     {
     }
 
-    public string GetClearStringWithRSAKey(string cipherString)
-        => GetClearStringWithRSAKey(null, cipherString);
+    public string GetClearStringWithRsaKey(string cipherString)
+        => GetClearStringWithRsaKey(null, cipherString);
 
     public string GetClearStringWithMasterKey(string cipherString)
         => GetClearStringWithMasterKey(null, cipherString);
@@ -21,8 +21,8 @@ public class UserCryptoService : DefaultCryptoService, IUserCryptoService, ICryp
     public string GetClearStringAuto(string cipherString)
         => GetClearStringAuto(null, cipherString);
 
-    public byte[] GetClearBytesWithRSAKey(string cipherString)
-        => GetClearBytesWithRSAKey(null, cipherString);
+    public byte[] GetClearBytesWithRsaKey(string cipherString)
+        => GetClearBytesWithRsaKey(null, cipherString);
 
     public byte[] GetClearBytesWithMasterKey(string cipherString)
         => GetClearBytesWithMasterKey(null, cipherString);
@@ -30,14 +30,14 @@ public class UserCryptoService : DefaultCryptoService, IUserCryptoService, ICryp
     public byte[] GetClearBytesAuto(string cipherString)
         => GetClearBytesAuto(null, cipherString);
 
-    public string CryptClearStringWithRSAKey(string clearString)
-        => CryptClearStringWithRSAKey(null, clearString);
+    public string CryptClearStringWithRsaKey(string clearString)
+        => CryptClearStringWithRsaKey(null, clearString);
 
     public string CryptClearStringWithMasterKey(string clearString)
         => CryptClearStringWithMasterKey(null, clearString);
 
-    public string CryptClearBytesWithRSAKey(byte[] bytes)
-        => CryptClearBytesWithRSAKey(null, bytes);
+    public string CryptClearBytesWithRsaKey(byte[] bytes)
+        => CryptClearBytesWithRsaKey(null, bytes);
 
     public string CryptClearBytesWithMasterKey(byte[] bytes)
         => CryptClearBytesWithMasterKey(null, bytes);

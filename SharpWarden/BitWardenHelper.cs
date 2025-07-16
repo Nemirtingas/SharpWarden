@@ -14,7 +14,6 @@ using SharpWarden.NotificationClient.Services;
 using SharpWarden.WebClient.Services;
 using Org.BouncyCastle.OpenSsl;
 using System.Text;
-using System.Net;
 using System.Security.Cryptography;
 
 namespace SharpWarden;
@@ -25,21 +24,19 @@ public static class BitWardenHelper
     {
         var services = new ServiceCollection();
 
-        var hostUriBase = new Uri(hostBase);
-
         services.AddScoped<ISessionJsonConverterService, DefaultSessionJsonConverterService>();
         services.AddScoped<IKeyProviderService, DefaultKeyProviderService>();
         services.AddScoped<ICryptoService, DefaultCryptoService>();
         services.AddScoped<IUserCryptoService, UserCryptoService>();
         services.AddScoped<IVaultService, DefaultVaultService>();
         services.AddScoped<IOrganizationCryptoFactoryService, DefaultOrganizationCryptoFactoryService>();
-        services.AddScoped<IWebClientService, DefaultWebClientService>((services) =>
+        services.AddScoped<IWebClientService, DefaultWebClientService>((serviceProvider) =>
         {
-            return new DefaultWebClientService(services.GetRequiredService<ISessionJsonConverterService>(), hostBase, null, webClientId);
+            return new DefaultWebClientService(serviceProvider.GetRequiredService<ISessionJsonConverterService>(), hostBase, null, webClientId);
         });
-        services.AddScoped<INotificationClientService, DefaultNotificationClientService>((services) =>
+        services.AddScoped<INotificationClientService, DefaultNotificationClientService>((serviceProvider) =>
         {
-            return new DefaultNotificationClientService(services.GetRequiredService<IWebClientService>(), notificationUri);
+            return new DefaultNotificationClientService(serviceProvider.GetRequiredService<IWebClientService>(), notificationUri);
         });
 
         return services.BuildServiceProvider().CreateScope();
@@ -51,7 +48,7 @@ public static class BitWardenHelper
     public static IServiceScope CreateSessionScope(string hostBase, string notificationUri, Guid webClientId)
         => _CreateSessionScope(hostBase, notificationUri, webClientId);
 
-    public static SSHKeyModel GenerateRSAKey(int keySize = 4096, string comment = "")
+    public static SSHKeyModel GenerateRsaKey(int keySize = 4096, string comment = "")
     {
         var rsaKeyGen = new RsaKeyPairGenerator();
         rsaKeyGen.Init(new KeyGenerationParameters(new SecureRandom(), keySize));
@@ -71,7 +68,7 @@ public static class BitWardenHelper
         };
     }
 
-    public static SSHKeyModel GenerateED25519Key(string comment = "")
+    public static SSHKeyModel GenerateEd25519Key(string comment = "")
     {
         var keyGen = new Ed25519KeyPairGenerator();
         keyGen.Init(new Ed25519KeyGenerationParameters(new SecureRandom()));
@@ -99,7 +96,7 @@ public static class BitWardenHelper
         using var writer = new BinaryWriter(ms, Encoding.UTF8, true);
 
         // Header
-        writer.Write(Encoding.ASCII.GetBytes("openssh-key-v1\0"));
+        writer.Write("openssh-key-v1\0"u8.ToArray());
         WriteSshString(writer, "none");  // ciphername
         WriteSshString(writer, "none");  // kdfname
         WriteSshString(writer, new byte[0]); // kdfoptions

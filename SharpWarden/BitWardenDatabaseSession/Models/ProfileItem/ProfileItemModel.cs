@@ -10,7 +10,7 @@ namespace SharpWarden.BitWardenDatabaseSession.Models.ProfileItem;
 
 public class ProfileItemModel : ISessionAware
 {
-    private IUserCryptoService _CryptoService;
+    private IUserCryptoService _cryptoService;
 
     public ProfileItemModel()
     {
@@ -24,14 +24,14 @@ public class ProfileItemModel : ISessionAware
         SetCryptoService(cryptoService);
     }
 
-    public bool HasSession() => _CryptoService != null;
+    public bool HasSession() => _cryptoService != null;
 
     public void SetCryptoService(IUserCryptoService cryptoService)
     {
-        _CryptoService = cryptoService;
+        _cryptoService = cryptoService;
 
-        Key?.SetCryptoService(_CryptoService);
-        PrivateKey?.SetCryptoService(_CryptoService);
+        Key?.SetCryptoService(_cryptoService);
+        PrivateKey?.SetCryptoService(_cryptoService);
     }
 
     [JsonProperty("_status")]
@@ -74,7 +74,7 @@ public class ProfileItemModel : ISessionAware
     public ObjectType ObjectType { get; set; } = ObjectType.Profile;
 
     [JsonProperty("organizations")]
-    public List<OrganizationModel> Organizations { get; set; } = new();
+    public List<OrganizationModel> Organizations { get; set; }
 
     [JsonProperty("premium")]
     public bool Premium { get; set; }

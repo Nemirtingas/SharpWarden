@@ -10,7 +10,7 @@ namespace SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
 
 public class CipherItemModel : ISessionAware
 {
-    private ConditionalCryptoService _ConditionalCryptoService;
+    private ConditionalCryptoService _conditionalCryptoService;
 
     public CipherItemModel()
     {
@@ -21,40 +21,37 @@ public class CipherItemModel : ISessionAware
         SetCryptoService(cryptoService);
     }
 
-    public bool HasSession() => _ConditionalCryptoService != null;
+    public bool HasSession() => _conditionalCryptoService != null;
 
     public void SetCryptoService(IUserCryptoService cryptoService)
     {
-        if (_ConditionalCryptoService == null)
-        {
-            _ConditionalCryptoService = new ConditionalCryptoService(cryptoService.KeyProviderService, () => this.OrganizationId);
-        }
-        _ConditionalCryptoService.CryptoService = cryptoService;
+        _conditionalCryptoService ??= new ConditionalCryptoService(cryptoService.KeyProviderService, () => this.OrganizationId);
+        _conditionalCryptoService.CryptoService = cryptoService;
 
-        Card?.SetCryptoService(_ConditionalCryptoService);
-        Identity?.SetCryptoService(_ConditionalCryptoService);
-        Login?.SetCryptoService(_ConditionalCryptoService);
-        Name?.SetCryptoService(_ConditionalCryptoService);
-        Notes?.SetCryptoService(_ConditionalCryptoService);
-        SSHKey?.SetCryptoService(_ConditionalCryptoService);
+        Card?.SetCryptoService(_conditionalCryptoService);
+        Identity?.SetCryptoService(_conditionalCryptoService);
+        Login?.SetCryptoService(_conditionalCryptoService);
+        Name?.SetCryptoService(_conditionalCryptoService);
+        Notes?.SetCryptoService(_conditionalCryptoService);
+        SshKey?.SetCryptoService(_conditionalCryptoService);
 
         if (Attachments != null)
             foreach (var v in Attachments)
-                v.SetCryptoService(_ConditionalCryptoService);
+                v.SetCryptoService(_conditionalCryptoService);
 
         if (Fields != null)
             foreach (var v in Fields)
-                v.SetCryptoService(_ConditionalCryptoService);
+                v.SetCryptoService(_conditionalCryptoService);
 
         if (PasswordHistory != null)
             foreach (var v in PasswordHistory)
-                v.SetCryptoService(_ConditionalCryptoService);
+                v.SetCryptoService(_conditionalCryptoService);
     }
 
     public LoginFieldModel CreateLogin()
     {
         ItemType = CipherItemType.Login;
-        Login = new LoginFieldModel(_ConditionalCryptoService);
+        Login = new LoginFieldModel(_conditionalCryptoService);
         return Login;
     }
 
@@ -68,22 +65,22 @@ public class CipherItemModel : ISessionAware
     public IdentityFieldModel CreateIdentity()
     {
         ItemType = CipherItemType.Identity;
-        Identity = new IdentityFieldModel(_ConditionalCryptoService);
+        Identity = new IdentityFieldModel(_conditionalCryptoService);
         return Identity;
     }
 
     public CardFieldModel CreateCard()
     {
         ItemType = CipherItemType.Card;
-        Card = new CardFieldModel(_ConditionalCryptoService);
+        Card = new CardFieldModel(_conditionalCryptoService);
         return Card;
     }
 
-    public SSHKeyFieldModel CreateSSHKey()
+    public SshKeyFieldModel CreateSshKey()
     {
-        ItemType = CipherItemType.SSHKey;
-        SSHKey = new SSHKeyFieldModel(_ConditionalCryptoService);
-        return SSHKey;
+        ItemType = CipherItemType.SshKey;
+        SshKey = new SshKeyFieldModel(_conditionalCryptoService);
+        return SshKey;
     }
 
     [JsonProperty("attachments")]
@@ -142,7 +139,7 @@ public class CipherItemModel : ISessionAware
     public Guid? OrganizationId { get; set; }
 
     [JsonProperty("organizationUseTotp")]
-    public bool OrganizationUseTOTP { get; set; }
+    public bool OrganizationUseTotp { get; set; }
 
     [JsonProperty("passwordHistory")]
     public List<PasswordHistoryModel> PasswordHistory { get; set; }
@@ -157,7 +154,7 @@ public class CipherItemModel : ISessionAware
     public SecureNoteFieldModel SecureNote { get; set; }
 
     [JsonProperty("sshKey")]
-    public SSHKeyFieldModel SSHKey { get; set; }
+    public SshKeyFieldModel SshKey { get; set; }
 
     [JsonProperty("type")]
     public CipherItemType ItemType { get; set; }

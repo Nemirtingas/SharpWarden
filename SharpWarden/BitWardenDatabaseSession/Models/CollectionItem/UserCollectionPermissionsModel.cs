@@ -9,10 +9,6 @@ namespace SharpWarden.BitWardenDatabaseSession.Models.CollectionItem;
 
 public class UserCollectionPermissionsModel
 {
-    public UserCollectionPermissionsModel()
-    {
-    }
-
     [JsonProperty("hidePasswords")]
     public bool HidePasswords { get; set; }
 

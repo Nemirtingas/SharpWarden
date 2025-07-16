@@ -193,7 +193,7 @@ public sealed class SharpWardenTest
         Assert.AreEqual(item.Identity.LastName.ClearString, "IdentityLastName");
         Assert.AreEqual(item.Identity.Username.ClearString, "IdentityUserName");
         Assert.AreEqual(item.Identity.Company.ClearString, "IdentityCompany");
-        Assert.AreEqual(item.Identity.SSN.ClearString, "IdentitySocialSecurityNumber");
+        Assert.AreEqual(item.Identity.SecuritySocialNumber.ClearString, "IdentitySocialSecurityNumber");
         Assert.AreEqual(item.Identity.PassportNumber.ClearString, "IdentityPassportNumber");
         Assert.AreEqual(item.Identity.LicenseNumber.ClearString, "IdentityLicenseNumber");
         Assert.AreEqual(item.Identity.Email.ClearString, "IdentityMail");
@@ -220,12 +220,12 @@ public sealed class SharpWardenTest
 
         Assert.IsNotNull(item);
         Assert.AreEqual(item.Id.ToString(), TestUserItemSSHKeyId);
-        Assert.AreEqual(item.ItemType, CipherItemType.SSHKey);
+        Assert.AreEqual(item.ItemType, CipherItemType.SshKey);
         Assert.AreEqual(item.Notes.ClearString, "SSHKeyNotes");
 
-        Assert.AreEqual(item.SSHKey.KeyFingerprint.ClearString, "SHA256:dbBC+ec5IlSfcufRZnalIk2q5ISTup3nff6mdjAccVI");
-        Assert.AreEqual(item.SSHKey.PublicKey.ClearString, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKoMZebfc4izVVC0pjt9KNAtpVQ15X1MgpdzjloRAP3N");
-        Assert.AreEqual(item.SSHKey.PrivateKey.ClearString, "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\nQyNTUxOQAAACCqDGXm33OIs1VQtKY7fSjQLaVUNeV9TIKXc45aEQD9zQAAAIhBcXK7QXFy\nuwAAAAtzc2gtZWQyNTUxOQAAACCqDGXm33OIs1VQtKY7fSjQLaVUNeV9TIKXc45aEQD9zQ\nAAAEAZBznOkm7Q61yxXzyWOmVw+OPn7eKOBpcf4cELcPnPnKoMZebfc4izVVC0pjt9KNAt\npVQ15X1MgpdzjloRAP3NAAAAAAECAwQF\n-----END OPENSSH PRIVATE KEY-----\n");
+        Assert.AreEqual(item.SshKey.KeyFingerprint.ClearString, "SHA256:dbBC+ec5IlSfcufRZnalIk2q5ISTup3nff6mdjAccVI");
+        Assert.AreEqual(item.SshKey.PublicKey.ClearString, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKoMZebfc4izVVC0pjt9KNAtpVQ15X1MgpdzjloRAP3N");
+        Assert.AreEqual(item.SshKey.PrivateKey.ClearString, "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\nQyNTUxOQAAACCqDGXm33OIs1VQtKY7fSjQLaVUNeV9TIKXc45aEQD9zQAAAIhBcXK7QXFy\nuwAAAAtzc2gtZWQyNTUxOQAAACCqDGXm33OIs1VQtKY7fSjQLaVUNeV9TIKXc45aEQD9zQ\nAAAEAZBznOkm7Q61yxXzyWOmVw+OPn7eKOBpcf4cELcPnPnKoMZebfc4izVVC0pjt9KNAt\npVQ15X1MgpdzjloRAP3NAAAAAAECAwQF\n-----END OPENSSH PRIVATE KEY-----\n");
     }
 
     [TestMethod]
@@ -272,7 +272,7 @@ public sealed class SharpWardenTest
         Assert.AreEqual(item.Name.ClearString, "SharpWardenOrganizationEntry");
         Assert.AreEqual(item.Login.Username.ClearString, "OrganizationUsername");
         Assert.AreEqual(item.Login.Password.ClearString, "OrganizationPassword");
-        Assert.AreEqual(item.Login.TOTP.ClearString, "OrganizationAuthenticatorKey");
+        Assert.AreEqual(item.Login.Totp.ClearString, "OrganizationAuthenticatorKey");
     }
 
     [TestMethod]
@@ -306,7 +306,7 @@ public sealed class SharpWardenTest
         {
             ClearString = "TestCreateUserLoginItemPassword"
         };
-        loginItem.TOTP = new EncryptedString(UserCryptoService)
+        loginItem.Totp = new EncryptedString(UserCryptoService)
         {
             ClearString = "TestCreateUserLoginItemTOTP"
         };
@@ -331,8 +331,8 @@ public sealed class SharpWardenTest
         Assert.AreEqual(cipherItemSaved.Login.Password.ClearString, cipherItem.Login.Password.ClearString);
         Assert.AreEqual(cipherItemSaved.Login.Password.CipherString, cipherItem.Login.Password.CipherString);
 
-        Assert.AreEqual(cipherItemSaved.Login.TOTP.ClearString, cipherItem.Login.TOTP.ClearString);
-        Assert.AreEqual(cipherItemSaved.Login.TOTP.CipherString, cipherItem.Login.TOTP.CipherString);
+        Assert.AreEqual(cipherItemSaved.Login.Totp.ClearString, cipherItem.Login.Totp.ClearString);
+        Assert.AreEqual(cipherItemSaved.Login.Totp.CipherString, cipherItem.Login.Totp.CipherString);
 
         await VaultWebClient.DeleteCipherItemAsync(cipherItemSaved.Id.Value);
     }
@@ -539,7 +539,7 @@ public sealed class SharpWardenTest
         {
             ClearString = "TestCreateUserIdentityItemPostalCode"
         };
-        identityItem.SSN  = new EncryptedString(UserCryptoService)
+        identityItem.SecuritySocialNumber  = new EncryptedString(UserCryptoService)
         {
             ClearString = "TestCreateUserIdentityItemSSN"
         };
@@ -584,7 +584,7 @@ public sealed class SharpWardenTest
         Assert.AreEqual(cipherItemSaved.Identity.PassportNumber.ClearString, cipherItem.Identity.PassportNumber.ClearString);
         Assert.AreEqual(cipherItemSaved.Identity.Phone.ClearString         , cipherItem.Identity.Phone.ClearString         );
         Assert.AreEqual(cipherItemSaved.Identity.PostalCode.ClearString    , cipherItem.Identity.PostalCode.ClearString    );
-        Assert.AreEqual(cipherItemSaved.Identity.SSN.ClearString           , cipherItem.Identity.SSN.ClearString           );
+        Assert.AreEqual(cipherItemSaved.Identity.SecuritySocialNumber.ClearString           , cipherItem.Identity.SecuritySocialNumber.ClearString           );
         Assert.AreEqual(cipherItemSaved.Identity.State.ClearString         , cipherItem.Identity.State.ClearString         );
         Assert.AreEqual(cipherItemSaved.Identity.Title.ClearString         , cipherItem.Identity.Title.ClearString         );
         Assert.AreEqual(cipherItemSaved.Identity.Username.ClearString      , cipherItem.Identity.Username.ClearString      );
@@ -603,7 +603,7 @@ public sealed class SharpWardenTest
         Assert.AreEqual(cipherItemSaved.Identity.PassportNumber.CipherString, cipherItem.Identity.PassportNumber.CipherString);
         Assert.AreEqual(cipherItemSaved.Identity.Phone.CipherString         , cipherItem.Identity.Phone.CipherString         );
         Assert.AreEqual(cipherItemSaved.Identity.PostalCode.CipherString    , cipherItem.Identity.PostalCode.CipherString    );
-        Assert.AreEqual(cipherItemSaved.Identity.SSN.CipherString           , cipherItem.Identity.SSN.CipherString           );
+        Assert.AreEqual(cipherItemSaved.Identity.SecuritySocialNumber.CipherString           , cipherItem.Identity.SecuritySocialNumber.CipherString           );
         Assert.AreEqual(cipherItemSaved.Identity.State.CipherString         , cipherItem.Identity.State.CipherString         );
         Assert.AreEqual(cipherItemSaved.Identity.Title.CipherString         , cipherItem.Identity.Title.CipherString         );
         Assert.AreEqual(cipherItemSaved.Identity.Username.CipherString      , cipherItem.Identity.Username.CipherString      );
@@ -633,9 +633,9 @@ public sealed class SharpWardenTest
             ViewPassword = true,
         };
 
-        var rsaKey = BitWardenHelper.GenerateRSAKey();
+        var rsaKey = BitWardenHelper.GenerateRsaKey();
 
-        var sshKeyItem = cipherItem.CreateSSHKey();
+        var sshKeyItem = cipherItem.CreateSshKey();
         sshKeyItem.PublicKey = new EncryptedString(UserCryptoService)
         {
             ClearString = rsaKey.PublicKey,
@@ -657,14 +657,14 @@ public sealed class SharpWardenTest
         Assert.AreEqual(cipherItemSaved.Notes.ClearString, cipherItem.Notes.ClearString);
         Assert.AreEqual(cipherItemSaved.Notes.CipherString, cipherItem.Notes.CipherString);
 
-        Assert.AreEqual(cipherItemSaved.SSHKey.PublicKey.ClearString, cipherItem.SSHKey.PublicKey.ClearString);
-        Assert.AreEqual(cipherItemSaved.SSHKey.PublicKey.CipherString, cipherItem.SSHKey.PublicKey.CipherString);
+        Assert.AreEqual(cipherItemSaved.SshKey.PublicKey.ClearString, cipherItem.SshKey.PublicKey.ClearString);
+        Assert.AreEqual(cipherItemSaved.SshKey.PublicKey.CipherString, cipherItem.SshKey.PublicKey.CipherString);
 
-        Assert.AreEqual(cipherItemSaved.SSHKey.PrivateKey.ClearString, cipherItem.SSHKey.PrivateKey.ClearString);
-        Assert.AreEqual(cipherItemSaved.SSHKey.PrivateKey.CipherString, cipherItem.SSHKey.PrivateKey.CipherString);
+        Assert.AreEqual(cipherItemSaved.SshKey.PrivateKey.ClearString, cipherItem.SshKey.PrivateKey.ClearString);
+        Assert.AreEqual(cipherItemSaved.SshKey.PrivateKey.CipherString, cipherItem.SshKey.PrivateKey.CipherString);
 
-        Assert.AreEqual(cipherItemSaved.SSHKey.KeyFingerprint.ClearString, cipherItem.SSHKey.KeyFingerprint.ClearString);
-        Assert.AreEqual(cipherItemSaved.SSHKey.KeyFingerprint.CipherString, cipherItem.SSHKey.KeyFingerprint.CipherString);
+        Assert.AreEqual(cipherItemSaved.SshKey.KeyFingerprint.ClearString, cipherItem.SshKey.KeyFingerprint.ClearString);
+        Assert.AreEqual(cipherItemSaved.SshKey.KeyFingerprint.CipherString, cipherItem.SshKey.KeyFingerprint.CipherString);
 
         await VaultWebClient.DeleteCipherItemAsync(cipherItemSaved.Id.Value);
     }

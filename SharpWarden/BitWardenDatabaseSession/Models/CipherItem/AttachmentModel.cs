@@ -10,7 +10,7 @@ namespace SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
 
 public class AttachmentModel : ISessionAware
 {
-    private IUserCryptoService _CryptoService;
+    private IUserCryptoService _cryptoService;
 
     public AttachmentModel()
     {
@@ -21,14 +21,14 @@ public class AttachmentModel : ISessionAware
         SetCryptoService(cryptoService);
     }
 
-    public bool HasSession() => _CryptoService != null;
+    public bool HasSession() => _cryptoService != null;
 
     public void SetCryptoService(IUserCryptoService cryptoService)
     {
-        _CryptoService = cryptoService;
+        _cryptoService = cryptoService;
 
-        FileName?.SetCryptoService(_CryptoService);
-        Key?.SetCryptoService(_CryptoService);
+        FileName?.SetCryptoService(_cryptoService);
+        Key?.SetCryptoService(_cryptoService);
     }
 
     [JsonProperty("fileName")]

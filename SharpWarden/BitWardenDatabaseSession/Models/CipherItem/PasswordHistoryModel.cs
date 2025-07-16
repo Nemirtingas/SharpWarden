@@ -10,7 +10,7 @@ namespace SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
 
 public class PasswordHistoryModel : ISessionAware
 {
-    private IUserCryptoService _CryptoService;
+    private IUserCryptoService _cryptoService;
 
     public PasswordHistoryModel()
     {
@@ -21,13 +21,13 @@ public class PasswordHistoryModel : ISessionAware
         SetCryptoService(cryptoService);
     }
 
-    public bool HasSession() => _CryptoService != null;
+    public bool HasSession() => _cryptoService != null;
 
     public void SetCryptoService(IUserCryptoService cryptoService)
     {
-        _CryptoService = cryptoService;
+        _cryptoService = cryptoService;
 
-        Password?.SetCryptoService(_CryptoService);
+        Password?.SetCryptoService(_cryptoService);
     }
 
     [JsonProperty("lastUsedDate")]
