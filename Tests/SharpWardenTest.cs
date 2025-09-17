@@ -27,7 +27,6 @@ public sealed class SharpWardenTest
 
     const string TestOrganizationId = "9dab2223-5ee2-480d-ace2-b3020126075b";
     const string TestOrganizationCollectionId = "16a3dadf-cfa3-4bab-a097-b30201260764";
-    const string TestOrganizationCollection2Id = "9be0a073-adf9-4e84-82fe-b35b00acdc2a";
     const string TestOrganizationItemId = "2c94bf3f-fcfe-48eb-b19c-b307006b69be";
 
     private static IServiceScope DatabaseSessionScope;
@@ -919,11 +918,28 @@ public sealed class SharpWardenTest
         Assert.AreEqual(cipherItemSaved.CollectionsIds.Count, cipherItem.CollectionsIds.Count);
         Assert.AreEqual(cipherItemSaved.CollectionsIds[0], cipherItem.CollectionsIds[0]);
 
-        var movedItem = await VaultWebClient.UpdateCipherItemCollectionsAsync(cipherItemSaved.Id.Value, [Guid.Parse(TestOrganizationCollection2Id)]);
+        var cryptString = new EncryptedString(organizationCryptoService);
+        cryptString.ClearString = "TestCollection";
 
-        Assert.AreEqual(movedItem.CollectionsIds[0], Guid.Parse(TestOrganizationCollection2Id));
+        var userProfile = VaultService.GetBitWardenDatabase().Profile;
+
+        // Create collection here, Bitwarden free account is limited to 2 collections
+        var collection = await VaultWebClient.CreateCollectionAsync(Guid.Parse(TestOrganizationId), cryptString.CipherString, [new UserCollectionPermissionsModel
+        {
+            Id = userProfile.Organizations.First(e => e.Id == Guid.Parse(TestOrganizationId)).OrganizationUserId,
+            HidePasswords = false,
+            Manage = true,
+            ReadOnly = false,
+        }], null);
+        Assert.IsNotNull(collection);
+        Assert.AreEqual(collection.OrganizationId.Value, Guid.Parse(TestOrganizationId));
+
+        var movedItem = await VaultWebClient.UpdateCipherItemCollectionsAsync(cipherItemSaved.Id.Value, [collection.Id.Value]);
+
+        Assert.AreEqual(movedItem.CollectionsIds[0], collection.Id.Value);
 
         await VaultWebClient.DeleteCipherItemAsync(cipherItemSaved.Id.Value);
+        await VaultWebClient.DeleteCollectionAsync(Guid.Parse(TestOrganizationId), collection.Id.Value);
     }
 
     [TestMethod]

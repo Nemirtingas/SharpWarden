@@ -269,7 +269,22 @@ class Example
         await VaultService.EncryptAttachmentAsync(fileStream, encryptedKey.ClearBytes, cryptedAttachmentStream);
         cryptedAttachmentStream.Position = 0;
 
-        await VaultWebClient.CreateCipherItemAttachmentAsync(item.Id.Value, encryptedName.CipherString, encryptedKey.CipherString, cryptedAttachmentStream);
+        var item = await VaultWebClient.GetCipherItemAsync(Guid.Parse("cb3bb34b-6491-4ded-b256-3cc9f76c975f"));
+
+        var attachmentModel = await VaultWebClient.CreateCipherItemAttachmentAsync(item.Id.Value, encryptedName.CipherString, encryptedKey.CipherString, cryptedAttachmentStream);
+
+        item = await VaultWebClient.GetCipherItemAsync(Guid.Parse("cb3bb34b-6491-4ded-b256-3cc9f76c975f"));
+
+        var attachment = item.Attachments[0];
+        var attachmentStream = await VaultWebClient.GetAttachmentAsync(attachment);
+
+        var clearStream = new MemoryStream();
+
+        await VaultService.DecryptAttachmentAsync(attachmentStream, attachment.Key.ClearBytes, clearStream);
+        clearStream.Position = 0;
+
+        await Task.Delay(5000);
+        await VaultWebClient.DeleteCipherItemAttachmentAsync(item.Id.Value, attachment.Id);
     }
 
     static Task<string> WaitForUserOTPAsync()
@@ -329,7 +344,9 @@ class Example
             //await LoadLocalDatabaseAsync(credentials[1]);
 
             await TestFolderAsync();
-            await TestCipherItemAsync();
+            //await TestCipherItemAsync();
+
+            //await TestAsync();
 
             //PrintCipherItems();
 
