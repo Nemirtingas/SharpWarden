@@ -27,6 +27,7 @@ public sealed class SharpWardenTest
 
     const string TestOrganizationId = "9dab2223-5ee2-480d-ace2-b3020126075b";
     const string TestOrganizationCollectionId = "16a3dadf-cfa3-4bab-a097-b30201260764";
+    const string TestOrganizationCollection2Id = "9be0a073-adf9-4e84-82fe-b35b00acdc2a";
     const string TestOrganizationItemId = "2c94bf3f-fcfe-48eb-b19c-b307006b69be";
 
     private static IServiceScope DatabaseSessionScope;
@@ -870,6 +871,59 @@ public sealed class SharpWardenTest
         Assert.AreEqual(collection.OrganizationId.Value, Guid.Parse(TestOrganizationId));
 
         await VaultWebClient.DeleteCollectionAsync(Guid.Parse(TestOrganizationId), collection.Id.Value);
+    }
+
+    [TestMethod]
+    public async Task _0404_TestOrganizationUpdateItemCollectionsAsync()
+    {
+        // TODO: Test for item existence before creating to not leave dangling tests
+
+        var organizationCryptoService = OrganizationCryptoFactoryService.GetOrganizationCryptoService(Guid.Parse(TestOrganizationId));
+
+        var cipherItem = new CipherItemModel(organizationCryptoService)
+        {
+            Name = new EncryptedString(organizationCryptoService)
+            {
+                ClearString = "TestMoveItemCollection"
+            },
+            Favorite = true,
+            Edit = true,
+            Reprompt = CipherRepromptType.Password,
+            ViewPassword = true,
+            OrganizationId = Guid.Parse(TestOrganizationId),
+            CollectionsIds = [Guid.Parse(TestOrganizationCollectionId)],
+        };
+
+        var loginItem = cipherItem.CreateLogin();
+        loginItem.Username = new EncryptedString(organizationCryptoService)
+        {
+            ClearString = "TestOrganizationUsername",
+        };
+        loginItem.Password = new EncryptedString(organizationCryptoService)
+        {
+            ClearString = "TestOrganizationPassword",
+        };
+
+        var cipherItemSaved = await VaultWebClient.CreateCipherItemAsync(cipherItem);
+
+        Assert.IsNotNull(cipherItemSaved?.Id);
+
+        // The collection ids are not returned on creation result,
+        // but if someday they do, its handled.
+        if (cipherItemSaved.CollectionsIds == null)
+        {
+            VaultService.ReloadBitWardenDatabase(await VaultWebClient.GetDatabaseAsync());
+            cipherItemSaved = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == cipherItemSaved.Id.Value);
+        }
+
+        Assert.AreEqual(cipherItemSaved.CollectionsIds.Count, cipherItem.CollectionsIds.Count);
+        Assert.AreEqual(cipherItemSaved.CollectionsIds[0], cipherItem.CollectionsIds[0]);
+
+        var movedItem = await VaultWebClient.UpdateCipherItemCollectionsAsync(cipherItemSaved.Id.Value, [Guid.Parse(TestOrganizationCollection2Id)]);
+
+        Assert.AreEqual(movedItem.CollectionsIds[0], Guid.Parse(TestOrganizationCollection2Id));
+
+        await VaultWebClient.DeleteCipherItemAsync(cipherItemSaved.Id.Value);
     }
 
     [TestMethod]

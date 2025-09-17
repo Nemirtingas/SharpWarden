@@ -273,6 +273,19 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         return result;
     }
 
+    private async Task<CipherItemModel> _UpdateItemCollectionsAPIAsync(string apiPath, IEnumerable<Guid> newCollectionIds)
+    {
+        var content = _APIModelToContent(new CipherItemUpdateCollectionsRequestAPIModel
+        {
+            CollectionIds = newCollectionIds.ToList()
+        });
+
+        var response = await _httpClient.PutAsync($"{apiPath}", content).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        var result = _Deserialize<CipherItemUpdateCollectionsResponseAPIModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
+        return result.Cipher;
+    }
+
     private async Task _MoveTrashAPIAsync(string apiPath)
     {
         var response = await _httpClient.PutAsync($"{apiPath}", null).ConfigureAwait(false);
@@ -597,6 +610,14 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         }
 
         throw new InvalidDataException($"Unhandled cipher item type: {cipherItem.ItemType}");
+    }
+
+    public async Task<CipherItemModel> UpdateCipherItemCollectionsAsync(Guid id, List<Guid> newCollections)
+    {
+        if (!(newCollections?.Count > 0))
+            throw new InvalidDataException($"New collections ids must not be empty");
+
+        return await _UpdateItemCollectionsAPIAsync($"{_baseUrl}{CiphersApiPath}/{id}/collections_v2", newCollections).ConfigureAwait(false);
     }
 
     public async Task MoveToTrashCipherItemAsync(Guid id)

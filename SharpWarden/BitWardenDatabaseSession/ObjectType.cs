@@ -30,6 +30,8 @@ public enum ObjectType
     /// </summary>
     [EnumMember(Value = "cipherDetails")]
     CipherDetails,
+    [EnumMember(Value = "optionalCipherDetails")]
+    OptionalCipherDetails,
     [EnumMember(Value = "collectionDetails")]
     CollectionDetails,
     [EnumMember(Value = "collectionAccessDetails")]
