@@ -103,11 +103,11 @@ public sealed class SharpWardenTest
         var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemId));
 
         Assert.IsNotNull(item);
-        Assert.AreEqual(item.Id.ToString(), TestUserItemId);
-        Assert.AreEqual(item.Reprompt, CipherRepromptType.Password);
-        Assert.AreEqual(item.Name.ClearString, "SharpWardenTestItem");
-        Assert.AreEqual(item.Login.Username.ClearString, "TestUserName");
-        Assert.AreEqual(item.Login.Password.ClearString, "TestPassword");
+        Assert.AreEqual(TestUserItemId, item.Id.ToString());
+        Assert.AreEqual(CipherRepromptType.Password, item.Reprompt);
+        Assert.AreEqual("SharpWardenTestItem", item.Name.ClearString);
+        Assert.AreEqual("TestUserName", item.Login.Username.ClearString);
+        Assert.AreEqual("TestPassword", item.Login.Password.ClearString);
     }
 
     [TestMethod]
@@ -116,8 +116,8 @@ public sealed class SharpWardenTest
         var folder = VaultService.GetBitWardenDatabase().Folders.Find(e => e.Id == Guid.Parse(TestUserFolderId));
 
         Assert.IsNotNull(folder);
-        Assert.AreEqual(folder.Id.ToString(), TestUserFolderId);
-        Assert.AreEqual(folder.Name.ClearString, "SharpWardenTestFolder");
+        Assert.AreEqual(TestUserFolderId, folder.Id.ToString());
+        Assert.AreEqual("SharpWardenTestFolder", folder.Name.ClearString);
     }
 
     [TestMethod]
@@ -126,10 +126,10 @@ public sealed class SharpWardenTest
         var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemInFolderId));
 
         Assert.IsNotNull(item);
-        Assert.AreEqual(item.Id.ToString(), TestUserItemInFolderId);
-        Assert.AreEqual(item.Name.ClearString, "SharpWardenTestItemInFolder");
-        Assert.AreEqual(item.Login.Username.ClearString, "FolderUser");
-        Assert.AreEqual(item.Login.Password.ClearString, "FolderPassword");
+        Assert.AreEqual(TestUserItemInFolderId, item.Id.ToString());
+        Assert.AreEqual("SharpWardenTestItemInFolder", item.Name.ClearString);
+        Assert.AreEqual("FolderUser", item.Login.Username.ClearString);
+        Assert.AreEqual("FolderPassword", item.Login.Password.ClearString);
         Assert.AreEqual(item.FolderId, Guid.Parse(TestUserFolderId));
     }
 
@@ -139,33 +139,33 @@ public sealed class SharpWardenTest
         var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemLoginId));
 
         Assert.IsNotNull(item);
-        Assert.AreEqual(item.Id.ToString(), TestUserItemLoginId);
-        Assert.AreEqual(item.ItemType, CipherItemType.Login);
-        Assert.AreEqual(item.Notes.ClearString, "LoginNotes");
+        Assert.AreEqual(TestUserItemLoginId, item.Id.ToString());
+        Assert.AreEqual(CipherItemType.Login, item.ItemType);
+        Assert.AreEqual("LoginNotes", item.Notes.ClearString);
 
-        Assert.AreEqual(item.Login.Username.ClearString, "LoginUsername");
-        Assert.AreEqual(item.Login.Password.ClearString, "LoginPassword");
+        Assert.AreEqual("LoginUsername", item.Login.Username.ClearString);
+        Assert.AreEqual("LoginPassword", item.Login.Password.ClearString);
 
-        Assert.AreEqual(item.Login.Uris[0].Uri.ClearString, "LoginUrlDefault");
-        Assert.AreEqual(item.Login.Uris[0].Match, null);
+        Assert.AreEqual("LoginUrlDefault", item.Login.Uris[0].Uri.ClearString);
+        Assert.AreEqual(null, item.Login.Uris[0].Match);
 
-        Assert.AreEqual(item.Login.Uris[1].Uri.ClearString, "LoginUrlBaseDomain");
-        Assert.AreEqual(item.Login.Uris[1].Match, UriMatchType.Domain);
+        Assert.AreEqual("LoginUrlBaseDomain", item.Login.Uris[1].Uri.ClearString);
+        Assert.AreEqual(UriMatchType.Domain, item.Login.Uris[1].Match);
 
-        Assert.AreEqual(item.Login.Uris[2].Uri.ClearString, "LoginUrlHost");
-        Assert.AreEqual(item.Login.Uris[2].Match, UriMatchType.Host);
+        Assert.AreEqual("LoginUrlHost", item.Login.Uris[2].Uri.ClearString);
+        Assert.AreEqual(UriMatchType.Host, item.Login.Uris[2].Match);
 
-        Assert.AreEqual(item.Login.Uris[3].Uri.ClearString, "LoginUrlStartsWith");
-        Assert.AreEqual(item.Login.Uris[3].Match, UriMatchType.BeginWith);
+        Assert.AreEqual("LoginUrlStartsWith", item.Login.Uris[3].Uri.ClearString);
+        Assert.AreEqual(UriMatchType.BeginWith, item.Login.Uris[3].Match);
 
-        Assert.AreEqual(item.Login.Uris[4].Uri.ClearString, "LoginUrlRegularExpression");
-        Assert.AreEqual(item.Login.Uris[4].Match, UriMatchType.Regex);
+        Assert.AreEqual("LoginUrlRegularExpression", item.Login.Uris[4].Uri.ClearString);
+        Assert.AreEqual(UriMatchType.Regex, item.Login.Uris[4].Match);
 
-        Assert.AreEqual(item.Login.Uris[5].Uri.ClearString, "LoginUrlExact");
-        Assert.AreEqual(item.Login.Uris[5].Match, UriMatchType.Exact);
+        Assert.AreEqual("LoginUrlExact", item.Login.Uris[5].Uri.ClearString);
+        Assert.AreEqual(UriMatchType.Exact, item.Login.Uris[5].Match);
 
-        Assert.AreEqual(item.Login.Uris[6].Uri.ClearString, "LoginUrlNever");
-        Assert.AreEqual(item.Login.Uris[6].Match, UriMatchType.Never);
+        Assert.AreEqual("LoginUrlNever", item.Login.Uris[6].Uri.ClearString);
+        Assert.AreEqual(UriMatchType.Never, item.Login.Uris[6].Match);
     }
 
     [TestMethod]
@@ -174,16 +174,16 @@ public sealed class SharpWardenTest
         var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemCardId));
 
         Assert.IsNotNull(item);
-        Assert.AreEqual(item.Id.ToString(), TestUserItemCardId);
-        Assert.AreEqual(item.ItemType, CipherItemType.Card);
-        Assert.AreEqual(item.Notes.ClearString, "CardNotes");
+        Assert.AreEqual(TestUserItemCardId, item.Id.ToString());
+        Assert.AreEqual(CipherItemType.Card, item.ItemType);
+        Assert.AreEqual("CardNotes", item.Notes.ClearString);
 
-        Assert.AreEqual(item.Card.CardholderName.ClearString, "CardholderName");
-        Assert.AreEqual(item.Card.Number.ClearString, "CardNumber");
-        Assert.AreEqual(item.Card.ExpYear.ClearString, "2025");
-        Assert.AreEqual(item.Card.ExpMonth.ClearString, "6");
-        Assert.AreEqual(item.Card.Code.ClearString, "CardSecurityCode");
-        Assert.AreEqual(item.Card.Brand.ClearString, "Visa");
+        Assert.AreEqual("CardholderName", item.Card.CardholderName.ClearString);
+        Assert.AreEqual("CardNumber", item.Card.Number.ClearString);
+        Assert.AreEqual("2025", item.Card.ExpYear.ClearString);
+        Assert.AreEqual("6", item.Card.ExpMonth.ClearString);
+        Assert.AreEqual("CardSecurityCode", item.Card.Code.ClearString);
+        Assert.AreEqual("Visa", item.Card.Brand.ClearString);
     }
 
     [TestMethod]
@@ -192,27 +192,27 @@ public sealed class SharpWardenTest
         var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemIdentityId));
 
         Assert.IsNotNull(item);
-        Assert.AreEqual(item.Id.ToString(), TestUserItemIdentityId);
-        Assert.AreEqual(item.ItemType, CipherItemType.Identity);
-        Assert.AreEqual(item.Notes.ClearString, "IdentityNotes");
+        Assert.AreEqual(TestUserItemIdentityId, item.Id.ToString());
+        Assert.AreEqual(CipherItemType.Identity, item.ItemType);
+        Assert.AreEqual("IdentityNotes", item.Notes.ClearString);
 
-        Assert.AreEqual(item.Identity.Address1.ClearString, "IdentityAddress1");
-        Assert.AreEqual(item.Identity.Address2.ClearString, "IdentityAddress2");
-        Assert.AreEqual(item.Identity.Address3.ClearString, "IdentityAddress3");
-        Assert.AreEqual(item.Identity.City.ClearString, "IdentityCity");
-        Assert.AreEqual(item.Identity.State.ClearString, "IdentityState");
-        Assert.AreEqual(item.Identity.PostalCode.ClearString, "IdentityPostalCode");
-        Assert.AreEqual(item.Identity.Country.ClearString, "IdentityCountry");
-        Assert.AreEqual(item.Identity.FirstName.ClearString, "IdentityFirstName");
-        Assert.AreEqual(item.Identity.MiddleName.ClearString, "IdentityMiddleName");
-        Assert.AreEqual(item.Identity.LastName.ClearString, "IdentityLastName");
-        Assert.AreEqual(item.Identity.Username.ClearString, "IdentityUserName");
-        Assert.AreEqual(item.Identity.Company.ClearString, "IdentityCompany");
-        Assert.AreEqual(item.Identity.SecuritySocialNumber.ClearString, "IdentitySocialSecurityNumber");
-        Assert.AreEqual(item.Identity.PassportNumber.ClearString, "IdentityPassportNumber");
-        Assert.AreEqual(item.Identity.LicenseNumber.ClearString, "IdentityLicenseNumber");
-        Assert.AreEqual(item.Identity.Email.ClearString, "IdentityMail");
-        Assert.AreEqual(item.Identity.Phone.ClearString, "IdentityPhone");
+        Assert.AreEqual("IdentityAddress1", item.Identity.Address1.ClearString);
+        Assert.AreEqual("IdentityAddress2", item.Identity.Address2.ClearString);
+        Assert.AreEqual("IdentityAddress3", item.Identity.Address3.ClearString);
+        Assert.AreEqual("IdentityCity", item.Identity.City.ClearString);
+        Assert.AreEqual("IdentityState", item.Identity.State.ClearString);
+        Assert.AreEqual("IdentityPostalCode", item.Identity.PostalCode.ClearString);
+        Assert.AreEqual("IdentityCountry", item.Identity.Country.ClearString);
+        Assert.AreEqual("IdentityFirstName", item.Identity.FirstName.ClearString);
+        Assert.AreEqual("IdentityMiddleName", item.Identity.MiddleName.ClearString);
+        Assert.AreEqual("IdentityLastName", item.Identity.LastName.ClearString);
+        Assert.AreEqual("IdentityUserName", item.Identity.Username.ClearString);
+        Assert.AreEqual("IdentityCompany", item.Identity.Company.ClearString);
+        Assert.AreEqual("IdentitySocialSecurityNumber", item.Identity.SecuritySocialNumber.ClearString);
+        Assert.AreEqual("IdentityPassportNumber", item.Identity.PassportNumber.ClearString);
+        Assert.AreEqual("IdentityLicenseNumber", item.Identity.LicenseNumber.ClearString);
+        Assert.AreEqual("IdentityMail", item.Identity.Email.ClearString);
+        Assert.AreEqual("IdentityPhone", item.Identity.Phone.ClearString);
     }
 
     [TestMethod]
@@ -221,11 +221,11 @@ public sealed class SharpWardenTest
         var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemSecureNoteId));
 
         Assert.IsNotNull(item);
-        Assert.AreEqual(item.Id.ToString(), TestUserItemSecureNoteId);
-        Assert.AreEqual(item.ItemType, CipherItemType.SecureNote);
-        Assert.AreEqual(item.Notes.ClearString, "SecureNoteNotes");
+        Assert.AreEqual(TestUserItemSecureNoteId, item.Id.ToString());
+        Assert.AreEqual(CipherItemType.SecureNote, item.ItemType);
+        Assert.AreEqual("SecureNoteNotes", item.Notes.ClearString);
 
-        Assert.AreEqual(item.SecureNote.Type, SecureNoteType.Generic);
+        Assert.AreEqual(SecureNoteType.Generic, item.SecureNote.Type);
     }
 
     [TestMethod]
@@ -234,13 +234,13 @@ public sealed class SharpWardenTest
         var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemSSHKeyId));
 
         Assert.IsNotNull(item);
-        Assert.AreEqual(item.Id.ToString(), TestUserItemSSHKeyId);
-        Assert.AreEqual(item.ItemType, CipherItemType.SshKey);
-        Assert.AreEqual(item.Notes.ClearString, "SSHKeyNotes");
+        Assert.AreEqual(TestUserItemSSHKeyId, item.Id.ToString());
+        Assert.AreEqual(CipherItemType.SshKey, item.ItemType);
+        Assert.AreEqual("SSHKeyNotes", item.Notes.ClearString);
 
-        Assert.AreEqual(item.SshKey.KeyFingerprint.ClearString, "SHA256:dbBC+ec5IlSfcufRZnalIk2q5ISTup3nff6mdjAccVI");
-        Assert.AreEqual(item.SshKey.PublicKey.ClearString, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKoMZebfc4izVVC0pjt9KNAtpVQ15X1MgpdzjloRAP3N");
-        Assert.AreEqual(item.SshKey.PrivateKey.ClearString, "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\nQyNTUxOQAAACCqDGXm33OIs1VQtKY7fSjQLaVUNeV9TIKXc45aEQD9zQAAAIhBcXK7QXFy\nuwAAAAtzc2gtZWQyNTUxOQAAACCqDGXm33OIs1VQtKY7fSjQLaVUNeV9TIKXc45aEQD9zQ\nAAAEAZBznOkm7Q61yxXzyWOmVw+OPn7eKOBpcf4cELcPnPnKoMZebfc4izVVC0pjt9KNAt\npVQ15X1MgpdzjloRAP3NAAAAAAECAwQF\n-----END OPENSSH PRIVATE KEY-----\n");
+        Assert.AreEqual("SHA256:dbBC+ec5IlSfcufRZnalIk2q5ISTup3nff6mdjAccVI", item.SshKey.KeyFingerprint.ClearString);
+        Assert.AreEqual("ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKoMZebfc4izVVC0pjt9KNAtpVQ15X1MgpdzjloRAP3N", item.SshKey.PublicKey.ClearString);
+        Assert.AreEqual("-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW\nQyNTUxOQAAACCqDGXm33OIs1VQtKY7fSjQLaVUNeV9TIKXc45aEQD9zQAAAIhBcXK7QXFy\nuwAAAAtzc2gtZWQyNTUxOQAAACCqDGXm33OIs1VQtKY7fSjQLaVUNeV9TIKXc45aEQD9zQ\nAAAEAZBznOkm7Q61yxXzyWOmVw+OPn7eKOBpcf4cELcPnPnKoMZebfc4izVVC0pjt9KNAt\npVQ15X1MgpdzjloRAP3NAAAAAAECAwQF\n-----END OPENSSH PRIVATE KEY-----\n", item.SshKey.PrivateKey.ClearString);
     }
 
     [TestMethod]
@@ -249,32 +249,32 @@ public sealed class SharpWardenTest
         var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestUserItemCustomFieldsId));
 
         Assert.IsNotNull(item);
-        Assert.AreEqual(item.Id.ToString(), TestUserItemCustomFieldsId);
-        Assert.AreEqual(item.Name.ClearString, "SharpWardenCustomFields");
-        Assert.AreEqual(item.ItemType, CipherItemType.Login);
-        Assert.AreEqual(item.Notes.ClearString, "CustomFields");
+        Assert.AreEqual(TestUserItemCustomFieldsId, item.Id.ToString());
+        Assert.AreEqual("SharpWardenCustomFields", item.Name.ClearString);
+        Assert.AreEqual(CipherItemType.Login, item.ItemType);
+        Assert.AreEqual("CustomFields", item.Notes.ClearString);
 
-        Assert.AreEqual(item.Fields.Count, 5);
+        Assert.AreEqual(5, item.Fields.Count);
 
-        Assert.AreEqual(item.Fields[0].Name.ClearString, "TextField");
-        Assert.AreEqual(item.Fields[0].Value.ClearString, "TextFieldValue");
-        Assert.AreEqual(item.Fields[0].Type, CustomFieldType.Text);
+        Assert.AreEqual("TextField", item.Fields[0].Name.ClearString);
+        Assert.AreEqual("TextFieldValue", item.Fields[0].Value.ClearString);
+        Assert.AreEqual(CustomFieldType.Text, item.Fields[0].Type);
 
-        Assert.AreEqual(item.Fields[1].Name.ClearString, "HiddenField");
-        Assert.AreEqual(item.Fields[1].Value.ClearString, "HiddenFieldValue");
-        Assert.AreEqual(item.Fields[1].Type, CustomFieldType.Hidden);
+        Assert.AreEqual("HiddenField", item.Fields[1].Name.ClearString);
+        Assert.AreEqual("HiddenFieldValue", item.Fields[1].Value.ClearString);
+        Assert.AreEqual(CustomFieldType.Hidden, item.Fields[1].Type);
 
-        Assert.AreEqual(item.Fields[2].Name.ClearString, "CheckBoxField");
-        Assert.AreEqual(item.Fields[2].Value.ClearString, "true");
-        Assert.AreEqual(item.Fields[2].Type, CustomFieldType.Boolean);
+        Assert.AreEqual("CheckBoxField", item.Fields[2].Name.ClearString);
+        Assert.AreEqual("true", item.Fields[2].Value.ClearString);
+        Assert.AreEqual(CustomFieldType.Boolean, item.Fields[2].Type);
 
-        Assert.AreEqual(item.Fields[3].Name.ClearString, "LinkedFieldLoginUserName");
-        Assert.AreEqual(item.Fields[3].LinkedId, CustomFieldLinkType.LoginUsername);
-        Assert.AreEqual(item.Fields[3].Type, CustomFieldType.Linked);
+        Assert.AreEqual("LinkedFieldLoginUserName", item.Fields[3].Name.ClearString);
+        Assert.AreEqual(CustomFieldLinkType.LoginUsername, item.Fields[3].LinkedId);
+        Assert.AreEqual(CustomFieldType.Linked, item.Fields[3].Type);
 
-        Assert.AreEqual(item.Fields[4].Name.ClearString, "LinkedFieldLoginPassword");
-        Assert.AreEqual(item.Fields[4].LinkedId, CustomFieldLinkType.LoginPassword);
-        Assert.AreEqual(item.Fields[4].Type, CustomFieldType.Linked);
+        Assert.AreEqual("LinkedFieldLoginPassword", item.Fields[4].Name.ClearString);
+        Assert.AreEqual(CustomFieldLinkType.LoginPassword, item.Fields[4].LinkedId);
+        Assert.AreEqual(CustomFieldType.Linked, item.Fields[4].Type);
     }
 
     [TestMethod]
@@ -283,11 +283,11 @@ public sealed class SharpWardenTest
         var item = VaultService.GetBitWardenDatabase().Items.Find(e => e.Id == Guid.Parse(TestOrganizationItemId) && e.OrganizationId == Guid.Parse(TestOrganizationId));
 
         Assert.IsNotNull(item);
-        Assert.AreEqual(item.Id.ToString(), TestOrganizationItemId);
-        Assert.AreEqual(item.Name.ClearString, "SharpWardenOrganizationEntry");
-        Assert.AreEqual(item.Login.Username.ClearString, "OrganizationUsername");
-        Assert.AreEqual(item.Login.Password.ClearString, "OrganizationPassword");
-        Assert.AreEqual(item.Login.Totp.ClearString, "OrganizationAuthenticatorKey");
+        Assert.AreEqual(TestOrganizationItemId, item.Id.ToString());
+        Assert.AreEqual("SharpWardenOrganizationEntry", item.Name.ClearString);
+        Assert.AreEqual("OrganizationUsername", item.Login.Username.ClearString);
+        Assert.AreEqual("OrganizationPassword", item.Login.Password.ClearString);
+        Assert.AreEqual("OrganizationAuthenticatorKey", item.Login.Totp.ClearString);
     }
 
     [TestMethod]
@@ -996,8 +996,8 @@ public sealed class SharpWardenTest
             cipherItem = VaultWebClient.CreateCipherItemAsync(cipherItem).GetAwaiter().GetResult();
             Monitor.Wait(conditionVar);
         }
-        Assert.AreEqual(notificationMessage.Type, PushNotificationType.SyncCipherCreate);
-        Assert.AreEqual(notificationMessage.Payload.GetType(), typeof(SyncCipherPushNotificationModel));
+        Assert.AreEqual(PushNotificationType.SyncCipherCreate, notificationMessage.Type);
+        Assert.AreEqual(typeof(SyncCipherPushNotificationModel), notificationMessage.Payload.GetType());
         Assert.AreEqual(cipherItem.Id, (notificationMessage.Payload as SyncCipherPushNotificationModel).Id);
 
         lock (conditionVar)
@@ -1009,8 +1009,8 @@ public sealed class SharpWardenTest
             cipherItem = VaultWebClient.UpdateCipherItemAsync(cipherItem.Id.Value, cipherItem).GetAwaiter().GetResult();
             Monitor.Wait(conditionVar);
         }
-        Assert.AreEqual(notificationMessage.Type, PushNotificationType.SyncCipherUpdate);
-        Assert.AreEqual(notificationMessage.Payload.GetType(), typeof(SyncCipherPushNotificationModel));
+        Assert.AreEqual(PushNotificationType.SyncCipherUpdate, notificationMessage.Type);
+        Assert.AreEqual(typeof(SyncCipherPushNotificationModel), notificationMessage.Payload.GetType());
         Assert.AreEqual(cipherItem.Id, (notificationMessage.Payload as SyncCipherPushNotificationModel).Id);
 
         lock (conditionVar)
@@ -1018,8 +1018,8 @@ public sealed class SharpWardenTest
             VaultWebClient.DeleteCipherItemAsync(cipherItem.Id.Value).GetAwaiter().GetResult();
             Monitor.Wait(conditionVar);
         }
-        Assert.AreEqual(notificationMessage.Type, PushNotificationType.SyncLoginDelete);
-        Assert.AreEqual(notificationMessage.Payload.GetType(), typeof(SyncCipherPushNotificationModel));
+        Assert.AreEqual(PushNotificationType.SyncLoginDelete, notificationMessage.Type);
+        Assert.AreEqual(typeof(SyncCipherPushNotificationModel), notificationMessage.Payload.GetType());
         Assert.AreEqual(cipherItem.Id, (notificationMessage.Payload as SyncCipherPushNotificationModel).Id);
 
         var folder = default(FolderItemModel);
@@ -1029,8 +1029,8 @@ public sealed class SharpWardenTest
             folder = VaultWebClient.CreateFolderAsync(encryptedString.CipherString).GetAwaiter().GetResult();
             Monitor.Wait(conditionVar);
         }
-        Assert.AreEqual(notificationMessage.Type, PushNotificationType.SyncFolderCreate);
-        Assert.AreEqual(notificationMessage.Payload.GetType(), typeof(SyncFolderPushNotificationModel));
+        Assert.AreEqual(PushNotificationType.SyncFolderCreate, notificationMessage.Type);
+        Assert.AreEqual(typeof(SyncFolderPushNotificationModel), notificationMessage.Payload.GetType());
         Assert.AreEqual(folder.Id, (notificationMessage.Payload as SyncFolderPushNotificationModel).Id);
 
         lock (conditionVar)
@@ -1039,8 +1039,8 @@ public sealed class SharpWardenTest
             folder = VaultWebClient.UpdateFolderAsync(folder.Id.Value, encryptedString.CipherString).GetAwaiter().GetResult();
             Monitor.Wait(conditionVar);
         }
-        Assert.AreEqual(notificationMessage.Type, PushNotificationType.SyncFolderUpdate);
-        Assert.AreEqual(notificationMessage.Payload.GetType(), typeof(SyncFolderPushNotificationModel));
+        Assert.AreEqual(PushNotificationType.SyncFolderUpdate, notificationMessage.Type);
+        Assert.AreEqual(typeof(SyncFolderPushNotificationModel), notificationMessage.Payload.GetType());
         Assert.AreEqual(folder.Id, (notificationMessage.Payload as SyncFolderPushNotificationModel).Id);
 
         lock (conditionVar)
@@ -1048,8 +1048,8 @@ public sealed class SharpWardenTest
             VaultWebClient.DeleteFolderAsync(folder.Id.Value).GetAwaiter().GetResult();
             Monitor.Wait(conditionVar);
         }
-        Assert.AreEqual(notificationMessage.Type, PushNotificationType.SyncFolderDelete);
-        Assert.AreEqual(notificationMessage.Payload.GetType(), typeof(SyncFolderPushNotificationModel));
+        Assert.AreEqual(PushNotificationType.SyncFolderDelete, notificationMessage.Type);
+        Assert.AreEqual(typeof(SyncFolderPushNotificationModel), notificationMessage.Payload.GetType());
         Assert.AreEqual(folder.Id, (notificationMessage.Payload as SyncFolderPushNotificationModel).Id);
 
         await notificationClient.StopAsync();
