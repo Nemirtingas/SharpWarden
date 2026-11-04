@@ -20,7 +20,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.x'
+          dotnet-version: '10.x'
 
       - name: Restore dependencies
         run: dotnet restore SharpWarden/SharpWarden.csproj
@@ -32,4 +32,4 @@ jobs:
         run: dotnet pack SharpWarden/SharpWarden.csproj --configuration Release --no-build -o ./nupkg /p:PackageVersion=${VERSION}
 
       - name: Push to NuGet
-        run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+        run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
