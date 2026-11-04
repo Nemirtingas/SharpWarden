@@ -39,24 +39,38 @@ public class DefaultKeyProviderService : IKeyProviderService
     public void LoadBitWardenUserKey(byte[] userEmail, byte[] userPassword, int kdfIterations, string key, string privateKey)
     {
         var userMasterKey = BitWardenCipherService.ComputeMasterKey(userEmail, userPassword, kdfIterations);
-        var userEncryptionKey = BitWardenCipherService.HKDFSHA256(userMasterKey, "enc"u8.ToArray(), 32);
-        var userMacKey = BitWardenCipherService.HKDFSHA256(userMasterKey, "mac"u8.ToArray(), 32);
+        byte[] userEncryptionKey = null;
+        byte[] userMacKey = null;
+        byte[] symKey = null;
 
-        for (int i = 0; i < userMasterKey.Length; ++i)
-            userMasterKey[i] = 0;
+        try
+        {
+            userEncryptionKey = BitWardenCipherService.HKDFSHA256(userMasterKey, "enc"u8.ToArray(), 32);
+            userMacKey = BitWardenCipherService.HKDFSHA256(userMasterKey, "mac"u8.ToArray(), 32);
 
-        // Decrypt the protected symmetric key
-        var symKey = BitWardenCipherService.DecryptWithAesCbc256HmacSha256Base64(key, userEncryptionKey, userMacKey);
-        if (symKey.Length != 64)
-            throw new CryptographicException("Invalid decrypted symmetric key length.");
+            // Decrypt the protected symmetric key
+            symKey = BitWardenCipherService.DecryptWithAesCbc256HmacSha256Base64(key, userEncryptionKey, userMacKey);
+            if (symKey.Length != 64)
+                throw new CryptographicException("Invalid decrypted symmetric key length.");
 
-        _userKeys = new UserKeys();
+            var userKeys = new UserKeys();
 
-        Array.Copy(symKey, 0, _userKeys.SymmetricKey, 0, 32);
-        Array.Copy(symKey, 32, _userKeys.SymmetricMac, 0, 32);
+            Array.Copy(symKey, 0, userKeys.SymmetricKey, 0, 32);
+            Array.Copy(symKey, 32, userKeys.SymmetricMac, 0, 32);
 
-        // Decrypt RSA private key
-        _userKeys.RsaKey = BitWardenCipherService.DecryptWithAesCbc256HmacSha256Base64(privateKey, _userKeys.SymmetricKey, _userKeys.SymmetricMac);
+            // Decrypt RSA private key
+            userKeys.RsaKey = BitWardenCipherService.DecryptWithAesCbc256HmacSha256Base64(privateKey, userKeys.SymmetricKey, userKeys.SymmetricMac);
+
+            _userKeys = userKeys;
+        }
+        finally
+        {
+            // Do not leave intermediate key material lying around in memory.
+            CryptographicOperations.ZeroMemory(userMasterKey);
+            if (userEncryptionKey != null) CryptographicOperations.ZeroMemory(userEncryptionKey);
+            if (userMacKey != null) CryptographicOperations.ZeroMemory(userMacKey);
+            if (symKey != null) CryptographicOperations.ZeroMemory(symKey);
+        }
     }
 
     public void LoadBitWardenOrganizationKey(Guid organizationId, string organizationCipheredKey)
@@ -64,11 +78,24 @@ public class DefaultKeyProviderService : IKeyProviderService
         if (_keys.ContainsKey(organizationId))
             return;
 
+        if (_userKeys?.RsaKey == null)
+            throw new InvalidOperationException("The user key must be loaded before organization keys.");
+
         var organizationKey = BitWardenCipherService.DecryptWithRsa2048OaepSha1Base64(organizationCipheredKey, _userKeys.RsaKey);
-        _keys[organizationId] = new UserKeys
+        try
         {
-            SymmetricKey = organizationKey.Take(32).ToArray(),
-            SymmetricMac = organizationKey.Skip(32).Take(32).ToArray(),
-        };
+            if (organizationKey.Length != 64)
+                throw new CryptographicException($"Invalid decrypted organization key length for organization {organizationId}.");
+
+            _keys[organizationId] = new UserKeys
+            {
+                SymmetricKey = organizationKey[..32],
+                SymmetricMac = organizationKey[32..],
+            };
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(organizationKey);
+        }
     }
 }

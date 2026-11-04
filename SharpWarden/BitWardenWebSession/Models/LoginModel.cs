@@ -68,6 +68,7 @@ public class LoginModel
         => new LoginModel
         {
             ForcePasswordReset = ForcePasswordReset,
+            Kdf = Kdf,
             KdfIterations = KdfIterations,
             KdfMemory = KdfMemory,
             KdfParallelism = KdfParallelism,

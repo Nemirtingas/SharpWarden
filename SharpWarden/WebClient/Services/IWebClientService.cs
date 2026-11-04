@@ -29,6 +29,13 @@ public interface IWebClientService
 
     public DateTime ExpiresAt { get; }
 
+    /// <summary>
+    /// Device identifier sent to the server on login. Persist it and pass it back to
+    /// <see cref="BitWardenHelper.CreateSessionScope(string, string, Guid)"/> so the server recognizes
+    /// the device: otherwise each session is a new device (new device notification mail / OTP).
+    /// </summary>
+    public Guid DeviceId { get; }
+
     public Task PreloginAsync(string username);
 
     public Task AuthenticateAsync(string password);
