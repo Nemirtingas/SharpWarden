@@ -39,7 +39,37 @@ public static class BitWardenHelper
             return new DefaultNotificationClientService(serviceProvider.GetRequiredService<IWebClientService>(), notificationUri);
         });
 
-        return services.BuildServiceProvider().CreateScope();
+        return new OwnedServiceScope(services.BuildServiceProvider());
+    }
+
+    /// <summary>
+    /// Scope that also owns (and disposes) the service provider it was created from,
+    /// otherwise the provider built by <see cref="CreateSessionScope(string, string)"/> would never be disposed.
+    /// </summary>
+    private sealed class OwnedServiceScope : IServiceScope, IAsyncDisposable
+    {
+        private readonly ServiceProvider _serviceProvider;
+        private readonly AsyncServiceScope _scope;
+
+        public OwnedServiceScope(ServiceProvider serviceProvider)
+        {
+            _serviceProvider = serviceProvider;
+            _scope = serviceProvider.CreateAsyncScope();
+        }
+
+        public IServiceProvider ServiceProvider => _scope.ServiceProvider;
+
+        public void Dispose()
+        {
+            _scope.Dispose();
+            _serviceProvider.Dispose();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await _scope.DisposeAsync().ConfigureAwait(false);
+            await _serviceProvider.DisposeAsync().ConfigureAwait(false);
+        }
     }
 
     public static IServiceScope CreateSessionScope(string hostBase, string notificationUri)
