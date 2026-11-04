@@ -23,6 +23,8 @@ jobs:
       SHARP_WARDEN_TEST_ACCOUNT_USER: ${{ secrets.SHARP_WARDEN_TEST_ACCOUNT_USER }}
       SHARP_WARDEN_TEST_ACCOUNT_SECRET: ${{ secrets.SHARP_WARDEN_TEST_ACCOUNT_SECRET }}
       SHARP_WARDEN_TEST_ACCOUNT_PASSWORD: ${{ secrets.SHARP_WARDEN_TEST_ACCOUNT_PASSWORD }}
+      # Optional: stable device id. When unset, the tests derive one from the account credentials.
+      SHARP_WARDEN_TEST_DEVICE_ID: ${{ secrets.SHARP_WARDEN_TEST_DEVICE_ID }}
 
     steps:
       - name: Checkout code

@@ -325,7 +325,9 @@ class Example
 
     static async Task MainAsync()
     {
-        using (BitWardenDatabaseSessionScope = BitWardenHelper.CreateSessionScope(IWebClientService.BitWardenEUHostUrl, INotificationClientService.BitWardenEUHostUrl))
+        // Reuse the same device id between runs, otherwise Bitwarden sees a new device (and sends a mail) on each login.
+        var deviceId = Guid.TryParse(Environment.GetEnvironmentVariable("SharpWardenDeviceId"), out var id) ? id : Guid.NewGuid();
+        using (BitWardenDatabaseSessionScope = BitWardenHelper.CreateSessionScope(IWebClientService.BitWardenEUHostUrl, INotificationClientService.BitWardenEUHostUrl, deviceId))
         {
             var cts = new CancellationTokenSource();
 

@@ -41,14 +41,29 @@ public sealed class SharpWardenTest
 
     static SharpWardenTest()
     {
-        DatabaseSessionScope = SharpWarden.BitWardenHelper.CreateSessionScope(IWebClientService.BitWardenEUHostUrl, INotificationClientService.BitWardenEUHostUrl);
+        TestAccountUser = Environment.GetEnvironmentVariable("SHARP_WARDEN_TEST_ACCOUNT_USER");
+        TestAccountSecret = Environment.GetEnvironmentVariable("SHARP_WARDEN_TEST_ACCOUNT_SECRET");
+        TestAccountPassword = Environment.GetEnvironmentVariable("SHARP_WARDEN_TEST_ACCOUNT_PASSWORD");
+
+        DatabaseSessionScope = SharpWarden.BitWardenHelper.CreateSessionScope(IWebClientService.BitWardenEUHostUrl, INotificationClientService.BitWardenEUHostUrl, GetTestDeviceId());
         VaultWebClient = DatabaseSessionScope.ServiceProvider.GetRequiredService<IWebClientService>();
         VaultService = DatabaseSessionScope.ServiceProvider.GetRequiredService<IVaultService>();
         UserCryptoService = DatabaseSessionScope.ServiceProvider.GetRequiredService<IUserCryptoService>();
         OrganizationCryptoFactoryService = DatabaseSessionScope.ServiceProvider.GetRequiredService<IOrganizationCryptoFactoryService>();
-        TestAccountUser = Environment.GetEnvironmentVariable("SHARP_WARDEN_TEST_ACCOUNT_USER");
-        TestAccountSecret = Environment.GetEnvironmentVariable("SHARP_WARDEN_TEST_ACCOUNT_SECRET");
-        TestAccountPassword = Environment.GetEnvironmentVariable("SHARP_WARDEN_TEST_ACCOUNT_PASSWORD");
+    }
+
+    /// <summary>
+    /// Stable device id, so the server does not see a new device (and send a new device mail) on every run.
+    /// Uses SHARP_WARDEN_TEST_DEVICE_ID if set, otherwise derives it from the test account credentials
+    /// (it must not be hardcoded: a known device id skips the new device verification).
+    /// </summary>
+    private static Guid GetTestDeviceId()
+    {
+        if (Guid.TryParse(Environment.GetEnvironmentVariable("SHARP_WARDEN_TEST_DEVICE_ID"), out var deviceId))
+            return deviceId;
+
+        var hash = System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes($"SharpWarden.Tests.DeviceId|{TestAccountUser}|{TestAccountSecret}"));
+        return new Guid(hash.AsSpan(0, 16));
     }
 
     // This test works, but you need to send it back the OTP code, which is obviously impossible in github actions.
