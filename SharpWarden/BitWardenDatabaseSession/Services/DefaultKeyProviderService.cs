@@ -25,13 +25,13 @@ public class DefaultKeyProviderService : IKeyProviderService
         if (ownerId == null)
         {
             if (_userKeys == null)
-                throw new Exception("Key not found for user.");
+                throw new KeyNotFoundException("The user key is not loaded.");
 
             return _userKeys;
         }
 
         if (!_keys.TryGetValue(ownerId.Value, out var keys) || keys == null)
-            throw new Exception($"Key not found for organization {ownerId}.");
+            throw new KeyNotFoundException($"Key not found for organization {ownerId}.");
 
         return keys;
     }

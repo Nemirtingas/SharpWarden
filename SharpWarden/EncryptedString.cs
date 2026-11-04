@@ -66,7 +66,7 @@ public class EncryptedString : ISessionAware
                 case BitWardenCipherService.BitWardenCipherType.Rsa2048OaepSha1B64: CipherString = _cryptoService.CryptClearStringWithRsaKey(value); return;
             }
 
-            throw new NotImplementedException();
+            throw new NotSupportedException($"Unsupported cipher type {CipherType}.");
         }
     }
 
@@ -87,7 +87,7 @@ public class EncryptedString : ISessionAware
                 case BitWardenCipherService.BitWardenCipherType.Rsa2048OaepSha1B64: return _cryptoService.GetClearBytesWithRsaKey(CipherString);
             }
 
-            throw new NotImplementedException();
+            throw new NotSupportedException($"Unsupported cipher type {CipherType}.");
         }
 
         set
@@ -102,7 +102,7 @@ public class EncryptedString : ISessionAware
                 case BitWardenCipherService.BitWardenCipherType.Rsa2048OaepSha1B64: CipherString = _cryptoService.CryptClearBytesWithRsaKey(value); return;
             }
 
-            throw new NotImplementedException();
+            throw new NotSupportedException($"Unsupported cipher type {CipherType}.");
         }
     }
 
