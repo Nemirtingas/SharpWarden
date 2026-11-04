@@ -123,6 +123,8 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
     public DateTime ExpiresAt { get; private set; }
 
+    public Guid DeviceId => _guid;
+
     // Not sure how to make this work, it always returns false.
     //public async Task<bool> KnownDeviceAsync(string username)
     //{
