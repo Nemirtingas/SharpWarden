@@ -136,19 +136,36 @@ public class DefaultNotificationClientService : INotificationClientService, IDis
                         break;
                 }
 
-                await (OnPushNotificationAsyncReceived?.Invoke(message)!).ConfigureAwait(false);
+                await _RaisePushNotificationAsync(message).ConfigureAwait(false);
             });
 
         await _hubConnection.StartAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    private async Task _RaisePushNotificationAsync(PushNotificationBaseModel message)
+    {
+        var handlers = OnPushNotificationAsyncReceived;
+        if (handlers == null)
+            return;
+
+        // Invoke every subscriber and await all of them: awaiting the multicast delegate
+        // directly would only await the last subscriber (and throw when there is none).
+        await Task.WhenAll(handlers.GetInvocationList()
+            .Cast<Func<PushNotificationBaseModel, Task>>()
+            .Select(handler => handler(message) ?? Task.CompletedTask)).ConfigureAwait(false);
+    }
+
     public async Task StopAsync()
     {
         ResetEventSubscribers();
-        if (_hubConnection != null)
+
+        // Clear the field first so StopAsync followed by Dispose does not stop a disposed connection.
+        var hubConnection = _hubConnection;
+        _hubConnection = null;
+        if (hubConnection != null)
         {
-            await _hubConnection.StopAsync().ConfigureAwait(false);
-            await _hubConnection.DisposeAsync().ConfigureAwait(false);
+            await hubConnection.StopAsync().ConfigureAwait(false);
+            await hubConnection.DisposeAsync().ConfigureAwait(false);
         }
     }
 
@@ -159,11 +176,6 @@ public class DefaultNotificationClientService : INotificationClientService, IDis
 
     public void Dispose()
     {
-        ResetEventSubscribers();
-        if (_hubConnection != null)
-        {
-            _hubConnection.StopAsync().GetAwaiter().GetResult();
-            _hubConnection.DisposeAsync().GetAwaiter().GetResult();
-        }
+        StopAsync().GetAwaiter().GetResult();
     }
 }
