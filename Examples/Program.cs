@@ -246,7 +246,7 @@ class Example
         {
             folder = await VaultWebClient.GetFolderAsync(folder.Id.Value);
         }
-        catch (Exception e)
+        catch (Exception)
         {
         
         }
