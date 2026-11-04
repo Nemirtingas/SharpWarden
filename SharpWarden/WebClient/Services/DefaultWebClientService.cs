@@ -4,6 +4,7 @@
 // See LICENSE.txt in the project root for more information.
 
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text;
 using SharpWarden.BitWardenWebSession.Models;
 using SharpWarden.WebClient.Models;
@@ -16,6 +17,7 @@ using SharpWarden.BitWardenDatabaseSession;
 using SharpWarden.BitWardenDatabaseSession.Services;
 using SharpWarden.WebClient.Exceptions;
 using SharpWarden.BitWardenDatabaseSession.Models.CollectionItem;
+using SharpWarden.BitWardenWebSession;
 
 namespace SharpWarden.WebClient.Services;
 
@@ -27,6 +29,11 @@ public class DefaultWebClientService : IWebClientService, IDisposable
     private string _username;
     private readonly ISessionJsonConverterService _jsonSerializer;
     private readonly string _baseUrl;
+    private readonly Uri _baseUri;
+
+    // Client used to download resources hosted outside of the Bitwarden server (e.g. attachment storage).
+    // It never carries the user's bearer token.
+    private static readonly HttpClient AnonymousHttpClient = new();
 
     private const int AuthTokenExpirationThreshold = 60;
 
@@ -45,11 +52,18 @@ public class DefaultWebClientService : IWebClientService, IDisposable
     {
         deviceVersion = string.IsNullOrWhiteSpace(deviceVersion) ? IWebClientService.DenyLegacyUserMinimumVersion : deviceVersion;
 
+        ArgumentNullException.ThrowIfNull(jsonSerializer);
+        ArgumentException.ThrowIfNullOrWhiteSpace(bitwardenHostUrl);
+
+        if (!Uri.TryCreate(bitwardenHostUrl, UriKind.Absolute, out var hostUri) || (hostUri.Scheme != Uri.UriSchemeHttps && hostUri.Scheme != Uri.UriSchemeHttp))
+            throw new ArgumentException("The Bitwarden host url must be an absolute http(s) url.", nameof(bitwardenHostUrl));
+
         _jsonSerializer = jsonSerializer;
         _guid = deviceId ?? Guid.NewGuid();
         _webSession = new LoginModel();
         _httpClient = new HttpClient();
         _baseUrl = bitwardenHostUrl.TrimEnd('/');
+        _baseUri = new Uri(_baseUrl + "/");
         _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0");
         _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("device-type", $"{(int)DeviceType.Sdk}");
         _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Bitwarden-Client-Name", "web");
@@ -74,6 +88,9 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
         var masterKey = BitWardenCipherService.ComputeMasterKey(Encoding.UTF8.GetBytes(_username), passwordBytes, _webSession.KdfIterations);
         var userPasswordHash = BitWardenCipherService.ComputeUserPasswordHash(masterKey, passwordBytes);
+        var userPasswordHashB64 = Convert.ToBase64String(userPasswordHash);
+        CryptographicOperations.ZeroMemory(masterKey);
+        CryptographicOperations.ZeroMemory(userPasswordHash);
 
         var parameters = new Dictionary<string, string>{
             { "scope"           , "api offline_access" },
@@ -83,7 +100,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
             { "deviceName"      , "SharpWarden" },
             { "grant_type"      , "password" },
             { "username"        , _username },
-            { "password"        , Convert.ToBase64String(userPasswordHash) },
+            { "password"        , userPasswordHashB64 },
         };
 
         if (!string.IsNullOrWhiteSpace(otp))
@@ -119,12 +136,24 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
     public async Task PreloginAsync(string username)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(username);
+
         var content = new StringContent(new JObject { { "email", username } }.ToString(), new UTF8Encoding(false), "application/json");
         var response = await _httpClient.PostAsync($"{_baseUrl}/identity/accounts/prelogin", content).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
-        _webSession.KdfIterations = _Deserialize<PreLoginModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false)).KdfIterations;
-        _username = username;
+        var preLogin = _Deserialize<PreLoginModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
+        if (preLogin.Kdf != KdfType.PBKDF2SHA256)
+            throw new NotSupportedException($"KDF type {preLogin.Kdf} is not supported.");
+
+        // Refuse a KDF downgrade from a malicious or compromised server.
+        if (preLogin.KdfIterations < BitWardenCipherService.MinimumPbkdf2Iterations)
+            throw new CryptographicException($"The server returned an unsafe KDF iteration count ({preLogin.KdfIterations}).");
+
+        _webSession.Kdf = preLogin.Kdf;
+        _webSession.KdfIterations = preLogin.KdfIterations;
+        // Bitwarden uses the trimmed, lower-cased email as the master key salt.
+        _username = username.Trim().ToLowerInvariant();
     }
 
     public Task AuthenticateAsync(string password)
@@ -135,7 +164,21 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         if (string.IsNullOrWhiteSpace(_username) || !(_webSession?.KdfIterations > 0))
             throw new InvalidOperationException("Prelogin must be called prior to " + nameof(AuthenticateAsync) + " .");
 
+        ArgumentNullException.ThrowIfNull(password);
+
         var passwordBytes = Encoding.UTF8.GetBytes(password);
+        try
+        {
+            await _AuthenticateAsync(passwordBytes, newDeviceOtpAsyncCallback).ConfigureAwait(false);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(passwordBytes);
+        }
+    }
+
+    private async Task _AuthenticateAsync(byte[] passwordBytes, Func<Task<string>> newDeviceOtpAsyncCallback)
+    {
         var response = await _PostAuthenticateAsync(passwordBytes, null).ConfigureAwait(false);
         var responseAt = DateTime.UtcNow;
         if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
@@ -164,7 +207,6 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         _webSession = _Deserialize<LoginModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
         ExpiresAt = responseAt.AddSeconds(_webSession.ExpiresIn - AuthTokenExpirationThreshold);
 
-        _httpClient.DefaultRequestHeaders.Remove("Bearer");
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _webSession.AccessToken);
     }
 
@@ -188,7 +230,6 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         _webSession.UpdateSession(_Deserialize<RefreshModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false)));
         ExpiresAt = responseAt.AddSeconds(_webSession.ExpiresIn - AuthTokenExpirationThreshold);
 
-        _httpClient.DefaultRequestHeaders.Remove("Bearer");
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _webSession.AccessToken);
 
         var profile = await GetAccountProfileAsync().ConfigureAwait(false);
@@ -218,7 +259,6 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         _webSession.UpdateSession(_Deserialize<ApiKeyLoginModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false)));
         ExpiresAt = responseAt.AddSeconds(_webSession.ExpiresIn - AuthTokenExpirationThreshold);
 
-        _httpClient.DefaultRequestHeaders.Remove("Bearer");
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _webSession.AccessToken);
 
         var profile = await GetAccountProfileAsync().ConfigureAwait(false);
@@ -507,7 +547,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
     public async Task<AttachmentModel> GetCipherItemAttachmentAsync(Guid id, string attachmentId)
     {
-        return await _GetAPIAsync<AttachmentModel>($"{_baseUrl}{CiphersApiPath}/{id}/attachment/{attachmentId}").ConfigureAwait(false);
+        return await _GetAPIAsync<AttachmentModel>($"{_baseUrl}{CiphersApiPath}/{id}/attachment/{Uri.EscapeDataString(attachmentId)}").ConfigureAwait(false);
     }
 
     public async Task<AttachmentModel> CreateCipherItemAttachmentAsync(Guid id, string encryptedFileName, string encryptedKey, Stream attachmentStream)
@@ -534,7 +574,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
             form.Add(fileContent, "data", encryptedFileName);
 
-            response = await _httpClient.PostAsync($"{_baseUrl}{CiphersApiPath}/{id}/attachment/{newAttachment.AttachmentId}", form).ConfigureAwait(false);
+            response = await _httpClient.PostAsync($"{_baseUrl}{CiphersApiPath}/{id}/attachment/{Uri.EscapeDataString(newAttachment.AttachmentId)}", form).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
         }
         catch
@@ -555,7 +595,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
     public async Task DeleteCipherItemAttachmentAsync(Guid id, string attachmentId)
     {
-        await _DeleteAPIAsync($"{_baseUrl}{CiphersApiPath}/{id}/attachment/{attachmentId}").ConfigureAwait(false);
+        await _DeleteAPIAsync($"{_baseUrl}{CiphersApiPath}/{id}/attachment/{Uri.EscapeDataString(attachmentId)}").ConfigureAwait(false);
     }
 
     public async Task<CipherItemModel> CreateCipherItemAsync(CipherItemModel cipherItem)
@@ -724,7 +764,22 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
     public async Task<Stream> GetAttachmentAsync(AttachmentModel attachment)
     {
-        return await _GetAPIAsync(attachment.Url).ConfigureAwait(false);
+        ArgumentNullException.ThrowIfNull(attachment);
+
+        if (!Uri.TryCreate(attachment.Url, UriKind.Absolute, out var attachmentUri))
+            throw new InvalidDataException("Invalid attachment url.");
+
+        // Only send the bearer token to the Bitwarden server itself. Attachments may be hosted
+        // on a third party storage (pre-signed url) which must never receive the user's access token.
+        if (Uri.Compare(attachmentUri, _baseUri, UriComponents.SchemeAndServer, UriFormat.SafeUnescaped, StringComparison.OrdinalIgnoreCase) == 0)
+            return await _GetAPIAsync(attachmentUri.AbsoluteUri).ConfigureAwait(false);
+
+        if (attachmentUri.Scheme != Uri.UriSchemeHttps)
+            throw new InvalidDataException("Refusing to download an attachment from a non https external url.");
+
+        var response = await AnonymousHttpClient.GetAsync(attachmentUri).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
     }
 
     #endregion
