@@ -47,10 +47,22 @@ public static class BitWardenCipherService
             await _inner.WriteAsync(buffer.AsMemory(offset, count), cancellationToken).ConfigureAwait(false);
         }
 
+        public override void Write(ReadOnlySpan<byte> buffer)
+        {
+            _hmac.TransformBlock(buffer.ToArray(), 0, buffer.Length, null, 0);
+            _inner.Write(buffer);
+        }
+
+        public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            _hmac.TransformBlock(buffer.ToArray(), 0, buffer.Length, null, 0);
+            await _inner.WriteAsync(buffer, cancellationToken).ConfigureAwait(false);
+        }
+
         // Not supported
         public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-        public override void SetLength(long value) => _inner.SetLength(value);
+        public override void SetLength(long value) => throw new NotSupportedException();
     }
 
     public enum BitWardenCipherType
@@ -72,8 +84,26 @@ public static class BitWardenCipherService
         Rsa2048OaepSha1HmacSha256B64 = 6,
     }
 
+    /// <summary>
+    /// Minimum PBKDF2 iteration count accepted when deriving the master key.
+    /// Prevents a malicious or compromised server from downgrading the KDF to a trivially brute-forceable value.
+    /// </summary>
+    public const int MinimumPbkdf2Iterations = 5000;
+
+    private const int AesKeySize = 32;
+    private const int MacKeySize = 32;
+    private const int IvSize = 16;
+    private const int MacSize = 32;
+    private const int StreamBufferSize = 81920;
+
     public static byte[] ComputeMasterKey(byte[] userMail, byte[] userPassword, int kdfIterations)
     {
+        ArgumentNullException.ThrowIfNull(userMail);
+        ArgumentNullException.ThrowIfNull(userPassword);
+
+        if (kdfIterations < MinimumPbkdf2Iterations)
+            throw new CryptographicException($"KDF iteration count {kdfIterations} is below the minimum allowed ({MinimumPbkdf2Iterations}).");
+
         return PBKDF2SHA256(userPassword, userMail, kdfIterations, 32);
     }
 
@@ -84,168 +114,198 @@ public static class BitWardenCipherService
 
     public static byte[] PBKDF2SHA256(byte[] passwordBytes, byte[] salt, int iterations, int length)
     {
-        using var deriveBytes = new Rfc2898DeriveBytes(passwordBytes, salt, iterations, HashAlgorithmName.SHA256);
-        return deriveBytes.GetBytes(length);
+        return Rfc2898DeriveBytes.Pbkdf2(passwordBytes, salt, iterations, HashAlgorithmName.SHA256, length);
     }
 
+    /// <summary>
+    /// HKDF-Expand (RFC 5869) with SHA-256, using <paramref name="inputKey"/> as the pseudo random key.
+    /// </summary>
     public static byte[] HKDFSHA256(byte[] inputKey, byte[] info, int length)
     {
-        using var hmac = new HMACSHA256(inputKey);
-        byte[] okm = new byte[length];
-        byte[] previous = [];
-        int bytesFilled = 0;
-        byte counter = 1;
-
-        while (bytesFilled < length)
-        {
-            hmac.Initialize();
-            hmac.Key = inputKey;
-
-            hmac.TransformBlock(previous, 0, previous.Length, null, 0);
-            hmac.TransformBlock(info, 0, info.Length, null, 0);
-            hmac.TransformFinalBlock([counter], 0, 1);
-
-            previous = hmac.Hash;
-            int toCopy = Math.Min(previous.Length, length - bytesFilled);
-            Array.Copy(previous, 0, okm, bytesFilled, toCopy);
-            bytesFilled += toCopy;
-            counter++;
-        }
-
-        return okm;
+        return HKDF.Expand(HashAlgorithmName.SHA256, inputKey, length, info);
     }
 
+    private static void _CheckSymmetricKeys(byte[] encKey, byte[] macKey)
+    {
+        if (encKey == null || encKey.Length != AesKeySize)
+            throw new CryptographicException("Invalid encryption key length.");
+
+        if (macKey == null || macKey.Length != MacKeySize)
+            throw new CryptographicException("Invalid MAC key length.");
+    }
+
+    private static void _CheckAttachmentKey(byte[] attachmentKey)
+    {
+        if (attachmentKey == null || attachmentKey.Length != AesKeySize + MacKeySize)
+            throw new CryptographicException("Invalid attachment key length.");
+    }
+
+    private static byte[] _FromBase64(string value)
+    {
+        try
+        {
+            return Convert.FromBase64String(value);
+        }
+        catch (FormatException ex)
+        {
+            throw new InvalidDataException("Invalid base64 data in cipher string.", ex);
+        }
+    }
+
+    private static byte[] _ParseMac(string value)
+    {
+        try
+        {
+            return Convert.FromBase64String(value);
+        }
+        catch (FormatException)
+        {
+            // Legacy workaround kept for compatibility with some malformed MAC encodings.
+            // The result is still verified against the computed MAC in constant time.
+            var pp = value.Split('/');
+            pp[0] += "/";
+            return _FromBase64(string.Join('/', pp));
+        }
+    }
+
+    /// <summary>
+    /// Decrypts a Bitwarden encrypted attachment.
+    /// The whole ciphertext is authenticated before any plaintext is written to <paramref name="decryptedAttachment"/>,
+    /// so <paramref name="attachment"/> must be seekable.
+    /// </summary>
     public static async Task DecryptWithAesCbc256HmacSha256Base64ByteStreamAsync(Stream attachment, Stream decryptedAttachment, byte[] attachmentKey)
     {
-        var keyEnc = attachmentKey[..32];
-        var keyMac = attachmentKey[32..];
+        ArgumentNullException.ThrowIfNull(attachment);
+        ArgumentNullException.ThrowIfNull(decryptedAttachment);
+        _CheckAttachmentKey(attachmentKey);
 
-        // Lire l’en-tête
+        if (!attachment.CanSeek)
+            throw new NotSupportedException("The encrypted attachment stream must be seekable.");
+
+        var keyEnc = attachmentKey[..AesKeySize];
+        var keyMac = attachmentKey[AesKeySize..];
+
+        var startPosition = attachment.Position;
+
         var type = (BitWardenCipherType)attachment.ReadByte();
         if (type != BitWardenCipherType.AesCbc256HmacSha256B64)
             throw new InvalidDataException("Unexpected cipher type.");
 
-        var ciphertextLength = attachment.Length - 1 - 16 - 32;
-        if (ciphertextLength <= 0)
-            throw new InvalidDataException("Attachment too small.");
+        var ciphertextLength = attachment.Length - startPosition - 1 - IvSize - MacSize;
+        if (ciphertextLength <= 0 || ciphertextLength % 16 != 0)
+            throw new InvalidDataException("Invalid attachment size.");
 
-        var iv = new byte[16];
+        var iv = new byte[IvSize];
         attachment.ReadExactly(iv);
 
-        var macExpected = new byte[32];
+        var macExpected = new byte[MacSize];
         attachment.ReadExactly(macExpected);
 
-        using var hmac = new HMACSHA256(keyMac);
-        hmac.TransformBlock(iv, 0, iv.Length, null, 0); // MAC = HMAC(iv + ciphertext)
+        var ciphertextPosition = attachment.Position;
 
-        using var aes = Aes.Create();
-        aes.Key = keyEnc;
-        aes.IV = iv;
-        aes.Mode = CipherMode.CBC;
-        aes.Padding = PaddingMode.PKCS7;
-
-        using var decryptor = aes.CreateDecryptor();
-        await using var cryptoStream = new CryptoStream(decryptedAttachment, decryptor, CryptoStreamMode.Write, leaveOpen: true);
-
-        const int bufferSize = 8192;
-        byte[] buffer = new byte[bufferSize];
+        byte[] buffer = new byte[StreamBufferSize];
         int bytesRead;
 
-        while ((bytesRead = await attachment.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
+        // First pass: authenticate the ciphertext before releasing any plaintext (encrypt-then-MAC).
+        using (var hmac = IncrementalHash.CreateHMAC(HashAlgorithmName.SHA256, keyMac))
         {
-            hmac.TransformBlock(buffer, 0, bytesRead, null, 0);
-            await cryptoStream.WriteAsync(buffer, 0, bytesRead).ConfigureAwait(false);
+            hmac.AppendData(iv);
+            while ((bytesRead = await attachment.ReadAsync(buffer).ConfigureAwait(false)) > 0)
+                hmac.AppendData(buffer, 0, bytesRead);
+
+            if (!CryptographicOperations.FixedTimeEquals(hmac.GetHashAndReset(), macExpected))
+                throw new CryptographicException("MAC mismatch - corrupted file or invalid key.");
         }
 
-        hmac.TransformFinalBlock([], 0, 0);
+        // Second pass: decrypt.
+        attachment.Position = ciphertextPosition;
 
-        if (hmac.Hash == null || !hmac.Hash.SequenceEqual(macExpected))
-            throw new CryptographicException("MAC mismatch – fichier corrompu ou clé invalide.");
+        using var aes = Aes.Create();
+        using var decryptor = aes.CreateDecryptor(keyEnc, iv);
+        await using var cryptoStream = new CryptoStream(decryptedAttachment, decryptor, CryptoStreamMode.Write, leaveOpen: true);
 
-        await cryptoStream.FlushAsync().ConfigureAwait(false);
+        while ((bytesRead = await attachment.ReadAsync(buffer).ConfigureAwait(false)) > 0)
+            await cryptoStream.WriteAsync(buffer.AsMemory(0, bytesRead)).ConfigureAwait(false);
+
+        await cryptoStream.FlushFinalBlockAsync().ConfigureAwait(false);
     }
 
     public static async Task EncryptWithAesCbc256HmacSha256Base64ByteStreamAsync(Stream input, Stream output, byte[] attachmentKey)
     {
-        var keyEnc = attachmentKey[..32];
-        var keyMac = attachmentKey[32..];
+        ArgumentNullException.ThrowIfNull(input);
+        ArgumentNullException.ThrowIfNull(output);
+        _CheckAttachmentKey(attachmentKey);
 
-        byte[] iv = RandomNumberGenerator.GetBytes(16);
+        if (!output.CanSeek)
+            throw new NotSupportedException("The output stream must be seekable.");
+
+        var keyEnc = attachmentKey[..AesKeySize];
+        var keyMac = attachmentKey[AesKeySize..];
+
+        byte[] iv = RandomNumberGenerator.GetBytes(IvSize);
 
         output.WriteByte((byte)BitWardenCipherType.AesCbc256HmacSha256B64);
 
-        await output.WriteAsync(iv, 0, iv.Length).ConfigureAwait(false);
+        await output.WriteAsync(iv).ConfigureAwait(false);
 
         long macPosition = output.Position;
-        await output.WriteAsync(new byte[32]).ConfigureAwait(false); // Placeholder
+        await output.WriteAsync(new byte[MacSize]).ConfigureAwait(false); // Placeholder
 
         using var hmac = new HMACSHA256(keyMac);
         hmac.TransformBlock(iv, 0, iv.Length, null, 0);
 
         using var aes = Aes.Create();
-        aes.Key = keyEnc;
-        aes.IV = iv;
-        aes.Mode = CipherMode.CBC;
-        aes.Padding = PaddingMode.PKCS7;
-
-        using var encryptor = aes.CreateEncryptor();
+        using var encryptor = aes.CreateEncryptor(keyEnc, iv);
         await using (var cryptoStream = new CryptoStream(new HmacAppendingStream(output, hmac), encryptor, CryptoStreamMode.Write, leaveOpen: true))
         {
-            const int bufferSize = 8192;
-            byte[] buffer = new byte[bufferSize];
+            byte[] buffer = new byte[StreamBufferSize];
             int bytesRead;
-            while ((bytesRead = await input.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
-            {
-                await cryptoStream.WriteAsync(buffer, 0, bytesRead).ConfigureAwait(false);
-            }
+            while ((bytesRead = await input.ReadAsync(buffer).ConfigureAwait(false)) > 0)
+                await cryptoStream.WriteAsync(buffer.AsMemory(0, bytesRead)).ConfigureAwait(false);
         }
 
         hmac.TransformFinalBlock([], 0, 0);
 
+        var endPosition = output.Position;
         output.Position = macPosition;
-        await output.WriteAsync(hmac.Hash, 0, 32).ConfigureAwait(false);
+        await output.WriteAsync(hmac.Hash.AsMemory(0, MacSize)).ConfigureAwait(false);
+        output.Position = endPosition;
     }
 
     public static byte[] DecryptWithAesCbc256HmacSha256Base64(string cipherString, byte[] stretchedEncKey, byte[] stretchedMacKey)
     {
+        ArgumentNullException.ThrowIfNull(cipherString);
+        _CheckSymmetricKeys(stretchedEncKey, stretchedMacKey);
+
         var parts = cipherString.Split('.', 2);
 
         if (parts.Length != 2 || !Enum.TryParse<BitWardenCipherType>(parts[0], out var cipherType) || cipherType != BitWardenCipherType.AesCbc256HmacSha256B64)
             throw new InvalidDataException("Unexpected cipher type.");
 
         var innerParts = parts[1].Split('|');
-        var iv = Convert.FromBase64String(innerParts[0]);
-        var ciphertext = Convert.FromBase64String(innerParts[1]);
-        byte[] mac;
-        try
-        {
-            mac = Convert.FromBase64String(innerParts[2]);
-        }
-        catch
-        {
-            var pp = innerParts[2].Split('/');
-            pp[0] = pp[0] + "/";
-            mac = Convert.FromBase64String(string.Join('/', pp));
-        }
+        if (innerParts.Length != 3)
+            throw new InvalidDataException("Invalid cipher string format.");
 
-        using (var hmac = new HMACSHA256(stretchedMacKey))
-        {
-            hmac.TransformBlock(iv, 0, iv.Length, null, 0);
-            hmac.TransformFinalBlock(ciphertext, 0, ciphertext.Length);
-            var computedMac = hmac.Hash;
+        var iv = _FromBase64(innerParts[0]);
+        var ciphertext = _FromBase64(innerParts[1]);
+        var mac = _ParseMac(innerParts[2]);
 
-            if (mac.Length != computedMac.Length || !mac.SequenceEqual(computedMac))
+        if (iv.Length != IvSize || mac.Length != MacSize || ciphertext.Length == 0 || ciphertext.Length % 16 != 0)
+            throw new InvalidDataException("Invalid cipher string format.");
+
+        using (var hmac = IncrementalHash.CreateHMAC(HashAlgorithmName.SHA256, stretchedMacKey))
+        {
+            hmac.AppendData(iv);
+            hmac.AppendData(ciphertext);
+
+            // Constant time comparison to avoid leaking MAC information through timing.
+            if (!CryptographicOperations.FixedTimeEquals(hmac.GetHashAndReset(), mac))
                 throw new CryptographicException("MAC mismatch - invalid password or data.");
         }
 
         using var aes = Aes.Create();
         aes.Key = stretchedEncKey;
-        aes.IV = iv;
-        aes.Mode = CipherMode.CBC;
-        aes.Padding = PaddingMode.PKCS7;
-
-        using var decryptor = aes.CreateDecryptor();
-        return decryptor.TransformFinalBlock(ciphertext, 0, ciphertext.Length);
+        return aes.DecryptCbc(ciphertext, iv, PaddingMode.PKCS7);
     }
 
     public static string DecryptStringWithAesCbc256HmacSha256Base64(string cipherString, byte[] stretchedEncKey, byte[] stretchedMacKey)
@@ -260,24 +320,22 @@ public static class BitWardenCipherService
 
     public static string EncryptWithAesCbc256HmacSha256Base64(byte[] plainBytes, byte[] stretchedEncKey, byte[] stretchedMacKey)
     {
+        ArgumentNullException.ThrowIfNull(plainBytes);
+        _CheckSymmetricKeys(stretchedEncKey, stretchedMacKey);
+
+        byte[] iv = RandomNumberGenerator.GetBytes(IvSize);
+
         using var aes = Aes.Create();
         aes.Key = stretchedEncKey;
-        aes.Mode = CipherMode.CBC;
-        aes.Padding = PaddingMode.PKCS7;
-        aes.GenerateIV(); // Génère un IV aléatoire
+        byte[] ciphertext = aes.EncryptCbc(plainBytes, iv, PaddingMode.PKCS7);
 
-        byte[] iv = aes.IV;
-
-        using var encryptor = aes.CreateEncryptor();
-        byte[] ciphertext = encryptor.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
-
-        // HMAC pour l'intégrité (sur IV + ciphertext)
+        // Encrypt-then-MAC: HMAC over IV + ciphertext.
         byte[] mac;
-        using (var hmac = new HMACSHA256(stretchedMacKey))
+        using (var hmac = IncrementalHash.CreateHMAC(HashAlgorithmName.SHA256, stretchedMacKey))
         {
-            hmac.TransformBlock(iv, 0, iv.Length, null, 0);
-            hmac.TransformFinalBlock(ciphertext, 0, ciphertext.Length);
-            mac = hmac.Hash;
+            hmac.AppendData(iv);
+            hmac.AppendData(ciphertext);
+            mac = hmac.GetHashAndReset();
         }
 
         return $"{(int)BitWardenCipherType.AesCbc256HmacSha256B64}.{Convert.ToBase64String(iv)}|{Convert.ToBase64String(ciphertext)}|{Convert.ToBase64String(mac)}";
@@ -285,6 +343,9 @@ public static class BitWardenCipherService
 
     public static byte[] DecryptWithRsa2048OaepSha1Base64(string cipherString, byte[] privateKeyDer)
     {
+        ArgumentNullException.ThrowIfNull(cipherString);
+        ArgumentNullException.ThrowIfNull(privateKeyDer);
+
         string[] parts = cipherString.Split('.', 2);
 
         if (parts.Length != 2 || !Enum.TryParse<BitWardenCipherType>(parts[0], out var cipherType) || cipherType != BitWardenCipherType.Rsa2048OaepSha1B64)
@@ -292,9 +353,9 @@ public static class BitWardenCipherService
 
         string[] innerParts = parts[1].Split('|');
         if (innerParts.Length != 1)
-            throw new ArgumentException("Expected a single component for RSA encrypted string.");
+            throw new InvalidDataException("Expected a single component for RSA encrypted string.");
 
-        byte[] ciphertext = Convert.FromBase64String(innerParts[0]);
+        byte[] ciphertext = _FromBase64(innerParts[0]);
 
         AsymmetricKeyParameter privateKey = PrivateKeyFactory.CreateKey(privateKeyDer);
         IAsymmetricBlockCipher engine = new OaepEncoding(new RsaEngine());
@@ -315,6 +376,9 @@ public static class BitWardenCipherService
 
     public static string EncryptWithRsa2048OaepSha1Base64(byte[] plainBytes, byte[] publicKeyDer)
     {
+        ArgumentNullException.ThrowIfNull(plainBytes);
+        ArgumentNullException.ThrowIfNull(publicKeyDer);
+
         AsymmetricKeyParameter publicKey = PublicKeyFactory.CreateKey(publicKeyDer);
         IAsymmetricBlockCipher engine = new OaepEncoding(new RsaEngine());
 
