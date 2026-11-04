@@ -5,9 +5,16 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write # Required by NuGet Trusted Publishing (GitHub OIDC token)
 
     steps:
       - name: Extract version from tag
@@ -31,5 +38,13 @@ jobs:
       - name: Pack NuGet package
         run: dotnet pack SharpWarden/SharpWarden.csproj --configuration Release --no-build -o ./nupkg /p:PackageVersion=${VERSION}
 
+      # Trusted Publishing: exchange the GitHub OIDC token for a short-lived (1 hour) NuGet API key.
+      # Requires a Trusted Publishing policy on nuget.org (owner: Nemirtingas, repository: SharpWarden, workflow: nuget.yml).
+      - name: NuGet login
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }} # nuget.org profile name, not the email address
+
       - name: Push to NuGet
-        run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+        run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
