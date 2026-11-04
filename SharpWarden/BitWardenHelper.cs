@@ -50,6 +50,9 @@ public static class BitWardenHelper
 
     public static SSHKeyModel GenerateRsaKey(int keySize = 4096, string comment = "")
     {
+        if (keySize < 2048)
+            throw new ArgumentOutOfRangeException(nameof(keySize), keySize, "RSA keys smaller than 2048 bits are not secure.");
+
         var rsaKeyGen = new RsaKeyPairGenerator();
         rsaKeyGen.Init(new KeyGenerationParameters(new SecureRandom(), keySize));
         AsymmetricCipherKeyPair keyPair = rsaKeyGen.GenerateKeyPair();
@@ -128,6 +131,7 @@ public static class BitWardenHelper
             privateKey.Encode(privBytes, 0);
             Buffer.BlockCopy(publicKey.GetEncoded(), 0, privBytes, 32, 32);
             WriteSshString(privWriter, privBytes);
+            CryptographicOperations.ZeroMemory(privBytes);
 
             WriteSshString(privWriter, Encoding.UTF8.GetBytes(""));
 
@@ -221,8 +225,7 @@ public static class BitWardenHelper
     {
         var base64 = sshKey.Split(' ')[1];
         var keyBytes = Convert.FromBase64String(base64);
-        using var sha256 = SHA256.Create();
-        var hash = sha256.ComputeHash(keyBytes);
+        var hash = SHA256.HashData(keyBytes);
         var fingerprint = Convert.ToBase64String(hash).TrimEnd('=');
         return $"SHA256:{fingerprint}";
     }
