@@ -53,7 +53,7 @@ public class DefaultCryptoService : ICryptoService
             case BitWardenCipherType.AesCbc256HmacSha256B64: return GetClearStringWithMasterKey(organizationId, cipherString);
         }
 
-        throw new NotImplementedException($"Unhandled cipher type {cipherType}");
+        throw new NotSupportedException($"Unsupported cipher type {cipherType}.");
     }
 
     public byte[] GetClearBytesWithRsaKey(Guid? organizationId, string cipherString)
@@ -90,7 +90,7 @@ public class DefaultCryptoService : ICryptoService
             case BitWardenCipherType.AesCbc256HmacSha256B64: return GetClearBytesWithMasterKey(organizationId, cipherString);
         }
 
-        throw new NotImplementedException($"Unhandled cipher type {cipherType}");
+        throw new NotSupportedException($"Unsupported cipher type {cipherType}.");
     }
 
     public string CryptClearStringWithRsaKey(Guid? organizationId, string clearString)
@@ -119,7 +119,7 @@ public class DefaultCryptoService : ICryptoService
             case BitWardenCipherType.AesCbc256HmacSha256B64: return CryptClearStringWithMasterKey(organizationId, clearString);
         }
 
-        throw new NotImplementedException($"Unhandled cipher type {cipherType}");
+        throw new NotSupportedException($"Unsupported cipher type {cipherType}.");
     }
 
     public string CryptClearBytesWithRsaKey(Guid? organizationId, byte[] bytes)
@@ -148,6 +148,6 @@ public class DefaultCryptoService : ICryptoService
             case BitWardenCipherType.AesCbc256HmacSha256B64: return CryptClearBytesWithMasterKey(organizationId, bytes);
         }
 
-        throw new NotImplementedException($"Unhandled cipher type {cipherType}");
+        throw new NotSupportedException($"Unsupported cipher type {cipherType}.");
     }
 }
