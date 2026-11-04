@@ -478,9 +478,9 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         {
             SSHKey = new CipherSSHKeyAPIModel
             {
-                KeyFingerprint = itemModel.SshKey.KeyFingerprint.CipherString,
-                PublicKey = itemModel.SshKey.PublicKey.CipherString,
-                PrivateKey = itemModel.SshKey.PrivateKey.CipherString,
+                KeyFingerprint = itemModel.SshKey.KeyFingerprint?.CipherString,
+                PublicKey = itemModel.SshKey.PublicKey?.CipherString,
+                PrivateKey = itemModel.SshKey.PrivateKey?.CipherString,
             }
         };
         _FillCipherItemAPIModel(apiModel, itemModel);
@@ -649,6 +649,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
             case CipherItemType.SecureNote: return await _UpdateAPIAsync<CipherItemModel, CipherItemSecureNoteRequestAPIModel>($"{_baseUrl}{CiphersApiPath}", id, _BuildCipherItemSecureNoteRequest(cipherItem)).ConfigureAwait(false);
             case CipherItemType.Card      : return await _UpdateAPIAsync<CipherItemModel, CipherItemCardRequestAPIModel>($"{_baseUrl}{CiphersApiPath}", id, _BuildCipherItemCardRequest(cipherItem)).ConfigureAwait(false);
             case CipherItemType.Identity  : return await _UpdateAPIAsync<CipherItemModel, CipherItemIdentityRequestAPIModel>($"{_baseUrl}{CiphersApiPath}", id, _BuildCipherItemIdentityRequest(cipherItem)).ConfigureAwait(false);
+            case CipherItemType.SshKey    : return await _UpdateAPIAsync<CipherItemModel, CipherItemSSHKeyRequestAPIModel>($"{_baseUrl}{CiphersApiPath}", id, _BuildCipherItemSSHKeyRequest(cipherItem)).ConfigureAwait(false);
         }
 
         throw new InvalidDataException($"Unhandled cipher item type: {cipherItem.ItemType}");
