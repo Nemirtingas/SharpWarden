@@ -677,7 +677,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
     public async Task DeleteCipherItemsAsync(IEnumerable<Guid> ids)
     {
-        await _MultiDeleteAPIAsync(CiphersApiPath, ids).ConfigureAwait(false);
+        await _MultiDeleteAPIAsync($"{_baseUrl}{CiphersApiPath}", ids).ConfigureAwait(false);
     }
 
     #endregion
