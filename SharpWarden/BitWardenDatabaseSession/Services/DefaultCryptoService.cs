@@ -19,12 +19,18 @@ public class DefaultCryptoService : ICryptoService
 
     public IKeyProviderService KeyProviderService => _keyProviderService;
 
+    /// <summary>
+    /// Returns the keys used to encrypt/decrypt data owned by <paramref name="organizationId"/> (the user when null).
+    /// </summary>
+    protected virtual UserKeys GetKeys(Guid? organizationId)
+        => _keyProviderService.GetUserKeys(organizationId);
+
     public string GetClearStringWithRsaKey(Guid? organizationId, string cipherString)
     {
         if (cipherString == null)
             return null;
 
-        var keys = _keyProviderService.GetUserKeys(organizationId);
+        var keys = GetKeys(organizationId);
         return BitWardenCipherService.DecryptStringWithRsa2048OaepSha1Base64(cipherString, keys.RsaKey);
     }
 
@@ -33,7 +39,7 @@ public class DefaultCryptoService : ICryptoService
         if (cipherString == null)
             return null;
 
-        var keys = _keyProviderService.GetUserKeys(organizationId);
+        var keys = GetKeys(organizationId);
         return BitWardenCipherService.DecryptStringWithAesCbc256HmacSha256Base64(cipherString, keys.SymmetricKey, keys.SymmetricMac);
     }
 
@@ -61,7 +67,7 @@ public class DefaultCryptoService : ICryptoService
         if (cipherString == null)
             return null;
 
-        var keys = _keyProviderService.GetUserKeys(organizationId);
+        var keys = GetKeys(organizationId);
         return BitWardenCipherService.DecryptWithRsa2048OaepSha1Base64(cipherString, keys.RsaKey);
     }
 
@@ -70,7 +76,7 @@ public class DefaultCryptoService : ICryptoService
         if (cipherString == null)
             return null;
 
-        var keys = _keyProviderService.GetUserKeys(organizationId);
+        var keys = GetKeys(organizationId);
         return BitWardenCipherService.DecryptWithAesCbc256HmacSha256Base64(cipherString, keys.SymmetricKey, keys.SymmetricMac);
     }
 
@@ -98,7 +104,7 @@ public class DefaultCryptoService : ICryptoService
         if (clearString == null)
             return null;
 
-        var keys = _keyProviderService.GetUserKeys(organizationId);
+        var keys = GetKeys(organizationId);
         return BitWardenCipherService.EncryptWithRsa2048OaepSha1Base64(Encoding.UTF8.GetBytes(clearString), keys.RsaKey);
     }
 
@@ -107,7 +113,7 @@ public class DefaultCryptoService : ICryptoService
         if (clearString == null)
             return null;
 
-        var keys = _keyProviderService.GetUserKeys(organizationId);
+        var keys = GetKeys(organizationId);
         return BitWardenCipherService.EncryptWithAesCbc256HmacSha256Base64(Encoding.UTF8.GetBytes(clearString), keys.SymmetricKey, keys.SymmetricMac);
     }
 
@@ -127,7 +133,7 @@ public class DefaultCryptoService : ICryptoService
         if (bytes == null)
             return null;
 
-        var keys = _keyProviderService.GetUserKeys(organizationId);
+        var keys = GetKeys(organizationId);
         return BitWardenCipherService.EncryptWithRsa2048OaepSha1Base64(bytes, keys.RsaKey);
     }
 
@@ -136,7 +142,7 @@ public class DefaultCryptoService : ICryptoService
         if (bytes == null)
             return null;
 
-        var keys = _keyProviderService.GetUserKeys(organizationId);
+        var keys = GetKeys(organizationId);
         return BitWardenCipherService.EncryptWithAesCbc256HmacSha256Base64(bytes, keys.SymmetricKey, keys.SymmetricMac);
     }
 
