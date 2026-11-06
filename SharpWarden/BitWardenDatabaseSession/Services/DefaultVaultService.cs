@@ -5,6 +5,7 @@
 
 using System.Text;
 using SharpWarden.BitWardenDatabaseSession.Models;
+using SharpWarden.BitWardenWebSession;
 
 namespace SharpWarden.BitWardenDatabaseSession.Services;
 
@@ -23,22 +24,30 @@ public class DefaultVaultService : IVaultService
     }
 
     public void LoadBitWardenDatabase(byte[] userPassword, int kdfIterations, Stream stream)
-    {
-        LoadBitWardenDatabase(userPassword, kdfIterations, _jsonService.Deserialize<DatabaseModel>(stream));
-    }
+        => LoadBitWardenDatabase(userPassword, KdfParameters.Pbkdf2(kdfIterations), stream);
 
     public void LoadBitWardenDatabase(byte[] userPassword, int kdfIterations, DatabaseModel database)
+        => LoadBitWardenDatabase(userPassword, KdfParameters.Pbkdf2(kdfIterations), database);
+
+    public void LoadBitWardenDatabase(byte[] userPassword, KdfParameters kdf, Stream stream)
     {
-        _database = database;
+        LoadBitWardenDatabase(userPassword, kdf, _jsonService.Deserialize<DatabaseModel>(stream));
+    }
+
+    public void LoadBitWardenDatabase(byte[] userPassword, KdfParameters kdf, DatabaseModel database)
+    {
         _keyProviderService.LoadBitWardenUserKey(
             Encoding.UTF8.GetBytes(database.Profile.Email),
             userPassword,
-            kdfIterations,
+            kdf,
             database.Profile.Key.CipherString,
             database.Profile.PrivateKey.CipherString);
 
-        foreach (var organization in _database.Profile.Organizations)
+        foreach (var organization in database.Profile.Organizations)
             _keyProviderService.LoadBitWardenOrganizationKey(organization.Id, organization.Key);
+
+        // Only keep the database once its keys could be loaded (e.g. not with a wrong password).
+        _database = database;
     }
 
     public void ReloadBitWardenDatabase(DatabaseModel database)

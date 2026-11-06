@@ -9,5 +9,6 @@ public interface IKeyProviderService
 {
     UserKeys GetUserKeys(Guid? ownerId);
     void LoadBitWardenUserKey(byte[] userEmail, byte[] userPassword, int kdfIterations, string key, string privateKey);
+    void LoadBitWardenUserKey(byte[] userEmail, byte[] userPassword, BitWardenWebSession.KdfParameters kdf, string key, string privateKey);
     void LoadBitWardenOrganizationKey(Guid organizationId, string organizationCipheredKey);
 }

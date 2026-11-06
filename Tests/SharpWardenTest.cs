@@ -93,7 +93,7 @@ public sealed class SharpWardenTest
     {
         VaultService.LoadBitWardenDatabase(
             Encoding.UTF8.GetBytes(TestAccountPassword),
-            VaultWebClient.UserKdfIterations,
+            VaultWebClient.UserKdf,
             await VaultWebClient.GetDatabaseAsync());
     }
 
