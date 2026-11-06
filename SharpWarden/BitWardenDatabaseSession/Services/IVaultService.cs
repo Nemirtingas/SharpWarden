@@ -29,6 +29,16 @@ public interface IVaultService
     /// <param name="database"></param>
     void LoadBitWardenDatabase(byte[] userPassword, int kdfIterations, DatabaseModel database);
     /// <summary>
+    /// Same as <see cref="LoadBitWardenDatabase(byte[], int, Stream)"/>, for any KDF (PBKDF2 or Argon2id),
+    /// e.g. <see cref="WebClient.Services.IWebClientService.UserKdf"/>.
+    /// </summary>
+    void LoadBitWardenDatabase(byte[] userPassword, BitWardenWebSession.KdfParameters kdf, Stream stream);
+    /// <summary>
+    /// Same as <see cref="LoadBitWardenDatabase(byte[], int, DatabaseModel)"/>, for any KDF (PBKDF2 or Argon2id),
+    /// e.g. <see cref="WebClient.Services.IWebClientService.UserKdf"/>.
+    /// </summary>
+    void LoadBitWardenDatabase(byte[] userPassword, BitWardenWebSession.KdfParameters kdf, DatabaseModel database);
+    /// <summary>
     /// Call this after loading the database: <see cref="LoadBitWardenDatabase"/> .
     /// </summary>
     /// <returns></returns>

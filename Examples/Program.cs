@@ -303,7 +303,7 @@ class Example
 
         VaultService.LoadBitWardenDatabase(
             Encoding.UTF8.GetBytes(masterPassword),
-            VaultWebClient.UserKdfIterations,
+            VaultWebClient.UserKdf,
             await VaultWebClient.GetDatabaseAsync());
     }
 

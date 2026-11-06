@@ -24,6 +24,12 @@ public interface IWebClientService
     public LoginModel GetWebSession();
 
     public int UserKdfIterations { get; }
+
+    /// <summary>
+    /// Key derivation settings of the account (PBKDF2 or Argon2id), to pass to
+    /// <see cref="BitWardenDatabaseSession.Services.IVaultService.LoadBitWardenDatabase(byte[], BitWardenWebSession.KdfParameters, BitWardenDatabaseSession.Models.DatabaseModel)"/>.
+    /// </summary>
+    public BitWardenWebSession.KdfParameters UserKdf { get; }
     public string UserKey { get; }
     public string UserPrivateKey { get; }
 

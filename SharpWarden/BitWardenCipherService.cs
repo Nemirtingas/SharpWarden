@@ -8,6 +8,9 @@ using System.Text;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Encodings;
 using Org.BouncyCastle.Crypto.Engines;
+using Org.BouncyCastle.Crypto.Generators;
+using Argon2Parameters = Org.BouncyCastle.Crypto.Parameters.Argon2Parameters;
+using SharpWarden.BitWardenWebSession;
 using Org.BouncyCastle.Security;
 
 namespace SharpWarden;
@@ -88,7 +91,7 @@ public static class BitWardenCipherService
     /// Minimum PBKDF2 iteration count accepted when deriving the master key.
     /// Prevents a malicious or compromised server from downgrading the KDF to a trivially brute-forceable value.
     /// </summary>
-    public const int MinimumPbkdf2Iterations = 5000;
+    public const int MinimumPbkdf2Iterations = KdfParameters.MinimumPbkdf2Iterations;
 
     private const int AesKeySize = 32;
     private const int MacKeySize = 32;
@@ -96,15 +99,48 @@ public static class BitWardenCipherService
     private const int MacSize = 32;
     private const int StreamBufferSize = 81920;
 
+    /// <summary>
+    /// Derives the master key with PBKDF2-SHA256.
+    /// </summary>
     public static byte[] ComputeMasterKey(byte[] userMail, byte[] userPassword, int kdfIterations)
+        => ComputeMasterKey(userMail, userPassword, KdfParameters.Pbkdf2(kdfIterations));
+
+    /// <summary>
+    /// Derives the master key from the password, using the email as salt (SHA-256 of the email for Argon2id).
+    /// </summary>
+    public static byte[] ComputeMasterKey(byte[] userMail, byte[] userPassword, KdfParameters kdf)
     {
         ArgumentNullException.ThrowIfNull(userMail);
         ArgumentNullException.ThrowIfNull(userPassword);
+        ArgumentNullException.ThrowIfNull(kdf);
 
-        if (kdfIterations < MinimumPbkdf2Iterations)
-            throw new CryptographicException($"KDF iteration count {kdfIterations} is below the minimum allowed ({MinimumPbkdf2Iterations}).");
+        kdf.Validate();
 
-        return PBKDF2SHA256(userPassword, userMail, kdfIterations, 32);
+        if (kdf.Type == KdfType.Argon2id)
+            return Argon2id(userPassword, SHA256.HashData(userMail), kdf.Iterations, kdf.Memory.Value * 1024, kdf.Parallelism.Value, 32);
+
+        return PBKDF2SHA256(userPassword, userMail, kdf.Iterations, 32);
+    }
+
+    /// <summary>
+    /// Argon2id (version 0x13) as specified by RFC 9106.
+    /// </summary>
+    public static byte[] Argon2id(byte[] password, byte[] salt, int iterations, int memoryKiB, int parallelism, int length)
+    {
+        var parameters = new Argon2Parameters.Builder(Argon2Parameters.Argon2id)
+            .WithVersion(Argon2Parameters.Version13)
+            .WithIterations(iterations)
+            .WithMemoryAsKB(memoryKiB)
+            .WithParallelism(parallelism)
+            .WithSalt(salt)
+            .Build();
+
+        var generator = new Argon2BytesGenerator();
+        generator.Init(parameters);
+
+        var result = new byte[length];
+        generator.GenerateBytes(password, result);
+        return result;
     }
 
     public static byte[] ComputeUserPasswordHash(byte[] userMasterKey, byte[] userPassword)

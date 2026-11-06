@@ -96,7 +96,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         if (string.IsNullOrWhiteSpace(_username) || !(_webSession?.KdfIterations > 0))
             throw new InvalidOperationException("Prelogin must be called prior to " + nameof(AuthenticateAsync) + " .");
 
-        var masterKey = BitWardenCipherService.ComputeMasterKey(Encoding.UTF8.GetBytes(_username), passwordBytes, _webSession.KdfIterations);
+        var masterKey = BitWardenCipherService.ComputeMasterKey(Encoding.UTF8.GetBytes(_username), passwordBytes, UserKdf);
         var userPasswordHash = BitWardenCipherService.ComputeUserPasswordHash(masterKey, passwordBytes);
         var userPasswordHashB64 = Convert.ToBase64String(userPasswordHash);
         CryptographicOperations.ZeroMemory(masterKey);
@@ -129,6 +129,14 @@ public class DefaultWebClientService : IWebClientService, IDisposable
     public LoginModel GetWebSession() => _webSession.Clone();
 
     public int UserKdfIterations => _webSession.KdfIterations;
+
+    public KdfParameters UserKdf => new()
+    {
+        Type = _webSession.Kdf,
+        Iterations = _webSession.KdfIterations,
+        Memory = _webSession.KdfMemory,
+        Parallelism = _webSession.KdfParallelism,
+    };
     public string UserKey => _webSession.Key;
     public string UserPrivateKey => _webSession.PrivateKey;
 
@@ -174,15 +182,19 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         await _EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
 
         var preLogin = _Deserialize<PreLoginModel>(await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false));
-        if (preLogin.Kdf != KdfType.PBKDF2SHA256)
-            throw new NotSupportedException($"KDF type {preLogin.Kdf} is not supported.");
-
-        // Refuse a KDF downgrade from a malicious or compromised server.
-        if (preLogin.KdfIterations < BitWardenCipherService.MinimumPbkdf2Iterations)
-            throw new CryptographicException($"The server returned an unsafe KDF iteration count ({preLogin.KdfIterations}).");
+        // Refuse unsupported KDFs, and unsafe parameters from a malicious or compromised server.
+        new KdfParameters
+        {
+            Type = preLogin.Kdf,
+            Iterations = preLogin.KdfIterations,
+            Memory = preLogin.KdfMemory,
+            Parallelism = preLogin.KdfParallelism,
+        }.Validate();
 
         _webSession.Kdf = preLogin.Kdf;
         _webSession.KdfIterations = preLogin.KdfIterations;
+        _webSession.KdfMemory = preLogin.KdfMemory;
+        _webSession.KdfParallelism = preLogin.KdfParallelism;
         // Bitwarden uses the trimmed, lower-cased email as the master key salt.
         _username = username.Trim().ToLowerInvariant();
     }

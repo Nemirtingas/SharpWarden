@@ -37,8 +37,11 @@ public class DefaultKeyProviderService : IKeyProviderService
     }
 
     public void LoadBitWardenUserKey(byte[] userEmail, byte[] userPassword, int kdfIterations, string key, string privateKey)
+        => LoadBitWardenUserKey(userEmail, userPassword, BitWardenWebSession.KdfParameters.Pbkdf2(kdfIterations), key, privateKey);
+
+    public void LoadBitWardenUserKey(byte[] userEmail, byte[] userPassword, BitWardenWebSession.KdfParameters kdf, string key, string privateKey)
     {
-        var userMasterKey = BitWardenCipherService.ComputeMasterKey(userEmail, userPassword, kdfIterations);
+        var userMasterKey = BitWardenCipherService.ComputeMasterKey(userEmail, userPassword, kdf);
         byte[] userEncryptionKey = null;
         byte[] userMacKey = null;
         byte[] symKey = null;
