@@ -12,6 +12,10 @@ on:
       - main
       - sensitive/*
 
+# The job only needs to read the repository: never give write access to a job that handles the test account secrets.
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Run unit tests
