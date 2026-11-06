@@ -759,8 +759,8 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         var apiModel = new CollectionCreateRequestAPIModel
         {
             Name = encryptedName,
-            Users = users,
-            Groups = groups
+            Users = users ?? [], // Vaultwarden requires both lists, even when empty.
+            Groups = groups ?? [],
         };
 
         return await _CreateAPIAsync<CollectionItemModel, CollectionCreateRequestAPIModel>($"{_baseUrl}{OrganizationsApiPath}/{organizationId}/collections", apiModel).ConfigureAwait(false);
