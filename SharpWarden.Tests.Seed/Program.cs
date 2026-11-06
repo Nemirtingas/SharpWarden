@@ -1,7 +1,7 @@
-// Creates, on a fresh Vaultwarden, a test account holding the data expected by Tests/SharpWardenTest.cs,
-// then writes the matching test configuration file (see Tests/TestConfig.cs).
+// Creates, on a fresh Vaultwarden, a test account holding the data expected by SharpWarden.Tests/SharpWardenTest.cs,
+// then writes the matching test configuration file (see SharpWarden.Tests/TestConfig.cs).
 //
-// Usage: dotnet run --project Tests.Seed -- <vaultwarden url> <output config file> [argon2id|pbkdf2]
+// Usage: dotnet run --project SharpWarden.Tests.Seed -- <vaultwarden url> <output config file> [argon2id|pbkdf2]
 // The server must allow sign-ups (SIGNUPS_ALLOWED=true) and have no SMTP configured.
 
 using System.Net.Http.Headers;
@@ -14,11 +14,11 @@ using SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
 using SharpWarden.BitWardenDatabaseSession.Services;
 using SharpWarden.BitWardenWebSession;
 using SharpWarden.WebClient.Services;
-using Tests;
+using SharpWarden.Tests;
 
 if (args.Length < 2)
 {
-    Console.Error.WriteLine("Usage: Tests.Seed <vaultwarden url> <output config file> [argon2id|pbkdf2]");
+    Console.Error.WriteLine("Usage: SharpWarden.Tests.Seed <vaultwarden url> <output config file> [argon2id|pbkdf2]");
     return 1;
 }
 

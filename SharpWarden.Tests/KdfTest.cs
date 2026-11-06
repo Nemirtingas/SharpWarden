@@ -4,7 +4,7 @@ using SharpWarden;
 using SharpWarden.BitWardenDatabaseSession.Services;
 using SharpWarden.BitWardenWebSession;
 
-namespace Tests;
+namespace SharpWarden.Tests;
 
 /// <summary>
 /// Offline tests of the key derivation functions (PBKDF2 and Argon2id).

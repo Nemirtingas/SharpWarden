@@ -2,7 +2,7 @@ using System.Net;
 using SharpWarden.WebClient;
 using SharpWarden.WebClient.Exceptions;
 
-namespace Tests;
+namespace SharpWarden.Tests;
 
 /// <summary>
 /// Offline tests of the server error parsing.

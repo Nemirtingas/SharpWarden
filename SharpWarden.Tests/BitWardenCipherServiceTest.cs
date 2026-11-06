@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using SharpWarden;
 
-namespace Tests;
+namespace SharpWarden.Tests;
 
 /// <summary>
 /// Offline tests of the cryptographic primitives (no Bitwarden account required).

@@ -1,7 +1,7 @@
 using Newtonsoft.Json;
 using SharpWarden.WebClient.Models;
 
-namespace Tests;
+namespace SharpWarden.Tests;
 
 /// <summary>
 /// Offline tests of the cipher request payload.

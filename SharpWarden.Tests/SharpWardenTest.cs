@@ -10,13 +10,13 @@ using SharpWarden.NotificationClient.Services;
 using SharpWarden.WebClient.Services;
 using System.Text;
 
-namespace Tests;
+namespace SharpWarden.Tests;
 
 [TestClass]
 public sealed class SharpWardenTest
 {
     // Server and test data ids: see TestConfig (TestConfig.json for the Bitwarden EU account,
-    // or the file written by Tests.Seed for a local Vaultwarden).
+    // or the file written by SharpWarden.Tests.Seed for a local Vaultwarden).
     private static readonly TestConfig Config = TestConfig.Load();
 
     static readonly string TestUserItemId = Config.UserItemId;

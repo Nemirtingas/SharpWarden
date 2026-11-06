@@ -47,10 +47,10 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Run Tests
-        run: dotnet test Tests/Tests.csproj --verbosity normal
+        run: dotnet test SharpWarden.Tests/SharpWarden.Tests.csproj --verbosity normal
 
   # Same tests against a throwaway Vaultwarden. No secret needed: the account and its data are
-  # created by Tests.Seed, so this job also runs on pull requests from forks and Dependabot.
+  # created by SharpWarden.Tests.Seed, so this job also runs on pull requests from forks and Dependabot.
   test-vaultwarden:
     name: Run unit tests (Vaultwarden)
     runs-on: ubuntu-latest
@@ -85,9 +85,9 @@ jobs:
 
       # Argon2id account: the Bitwarden EU job covers PBKDF2.
       - name: Seed Vaultwarden
-        run: dotnet run --project Tests.Seed --configuration Release --no-build -- http://localhost:8080 "$RUNNER_TEMP/vaultwarden-test-config.json" argon2id
+        run: dotnet run --project SharpWarden.Tests.Seed --configuration Release --no-build -- http://localhost:8080 "$RUNNER_TEMP/vaultwarden-test-config.json" argon2id
 
       - name: Run Tests
         env:
           SHARP_WARDEN_TEST_CONFIG: ${{ runner.temp }}/vaultwarden-test-config.json
-        run: dotnet test Tests/Tests.csproj --configuration Release --no-build --verbosity normal
+        run: dotnet test SharpWarden.Tests/SharpWarden.Tests.csproj --configuration Release --no-build --verbosity normal

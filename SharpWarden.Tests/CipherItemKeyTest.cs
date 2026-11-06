@@ -4,7 +4,7 @@ using SharpWarden;
 using SharpWarden.BitWardenDatabaseSession.Models.CipherItem;
 using SharpWarden.BitWardenDatabaseSession.Services;
 
-namespace Tests;
+namespace SharpWarden.Tests;
 
 /// <summary>
 /// Offline tests of ciphers that have their own encryption key ("key" field), using a fake account
