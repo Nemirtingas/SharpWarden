@@ -15,19 +15,23 @@ namespace Tests;
 [TestClass]
 public sealed class SharpWardenTest
 {
-    const string TestUserItemId = "1de1488c-f980-446a-bb5a-b30201265744";
-    const string TestUserFolderId = "01c15505-4683-48c2-a3fb-b302013ba7a0";
-    const string TestUserItemInFolderId = "348270df-0c8e-4e05-8997-b30201427190";
-    const string TestUserItemLoginId = "a65b2d2d-cd0a-4640-a778-b302014444c9";
-    const string TestUserItemCardId = "1db665ae-2e24-426c-83d8-b302014703a5";
-    const string TestUserItemIdentityId = "e5f3057c-1728-41a6-96dd-b302014a783c";
-    const string TestUserItemSecureNoteId = "be880b58-d562-4c4a-8abf-b302015348b6";
-    const string TestUserItemSSHKeyId = "5221df17-19e4-408b-b27f-b30201547789";
-    const string TestUserItemCustomFieldsId = "c59db8cb-3036-49cb-a16d-b307006c213d";
+    // Server and test data ids: see TestConfig (TestConfig.json for the Bitwarden EU account,
+    // or the file written by Tests.Seed for a local Vaultwarden).
+    private static readonly TestConfig Config = TestConfig.Load();
 
-    const string TestOrganizationId = "9dab2223-5ee2-480d-ace2-b3020126075b";
-    const string TestOrganizationCollectionId = "16a3dadf-cfa3-4bab-a097-b30201260764";
-    const string TestOrganizationItemId = "2c94bf3f-fcfe-48eb-b19c-b307006b69be";
+    static readonly string TestUserItemId = Config.UserItemId;
+    static readonly string TestUserFolderId = Config.UserFolderId;
+    static readonly string TestUserItemInFolderId = Config.UserItemInFolderId;
+    static readonly string TestUserItemLoginId = Config.UserItemLoginId;
+    static readonly string TestUserItemCardId = Config.UserItemCardId;
+    static readonly string TestUserItemIdentityId = Config.UserItemIdentityId;
+    static readonly string TestUserItemSecureNoteId = Config.UserItemSecureNoteId;
+    static readonly string TestUserItemSSHKeyId = Config.UserItemSSHKeyId;
+    static readonly string TestUserItemCustomFieldsId = Config.UserItemCustomFieldsId;
+
+    static readonly string TestOrganizationId = Config.OrganizationId;
+    static readonly string TestOrganizationCollectionId = Config.OrganizationCollectionId;
+    static readonly string TestOrganizationItemId = Config.OrganizationItemId;
 
     private static IServiceScope DatabaseSessionScope;
     private static IWebClientService VaultWebClient;
@@ -41,15 +45,22 @@ public sealed class SharpWardenTest
 
     static SharpWardenTest()
     {
-        TestAccountUser = Environment.GetEnvironmentVariable("SHARP_WARDEN_TEST_ACCOUNT_USER");
-        TestAccountSecret = Environment.GetEnvironmentVariable("SHARP_WARDEN_TEST_ACCOUNT_SECRET");
-        TestAccountPassword = Environment.GetEnvironmentVariable("SHARP_WARDEN_TEST_ACCOUNT_PASSWORD");
+        TestAccountUser = GetSetting("SHARP_WARDEN_TEST_ACCOUNT_USER", Config.Account?.User);
+        TestAccountSecret = GetSetting("SHARP_WARDEN_TEST_ACCOUNT_SECRET", Config.Account?.Secret);
+        TestAccountPassword = GetSetting("SHARP_WARDEN_TEST_ACCOUNT_PASSWORD", Config.Account?.Password);
 
-        DatabaseSessionScope = SharpWarden.BitWardenHelper.CreateSessionScope(IWebClientService.BitWardenEUHostUrl, INotificationClientService.BitWardenEUHostUrl, GetTestDeviceId());
+        DatabaseSessionScope = SharpWarden.BitWardenHelper.CreateSessionScope(Config.HostUrl, Config.NotificationUrl, GetTestDeviceId());
         VaultWebClient = DatabaseSessionScope.ServiceProvider.GetRequiredService<IWebClientService>();
         VaultService = DatabaseSessionScope.ServiceProvider.GetRequiredService<IVaultService>();
         UserCryptoService = DatabaseSessionScope.ServiceProvider.GetRequiredService<IUserCryptoService>();
         OrganizationCryptoFactoryService = DatabaseSessionScope.ServiceProvider.GetRequiredService<IOrganizationCryptoFactoryService>();
+    }
+
+    // Environment variable when set (CI secrets), otherwise the value from the configuration file.
+    private static string GetSetting(string environmentVariable, string? configValue)
+    {
+        var value = Environment.GetEnvironmentVariable(environmentVariable);
+        return string.IsNullOrWhiteSpace(value) ? configValue! : value;
     }
 
     /// <summary>
@@ -957,6 +968,8 @@ public sealed class SharpWardenTest
         await VaultWebClient.DeleteCollectionAsync(Guid.Parse(TestOrganizationId), collection.Id.Value);
     }
 
+    private static readonly TimeSpan NotificationTimeout = TimeSpan.FromMinutes(1);
+
     [TestMethod]
     public async Task _0901_TestNotificationAsync()
     {
@@ -994,7 +1007,7 @@ public sealed class SharpWardenTest
         lock (conditionVar)
         {
             cipherItem = VaultWebClient.CreateCipherItemAsync(cipherItem).GetAwaiter().GetResult();
-            Monitor.Wait(conditionVar);
+            Assert.IsTrue(Monitor.Wait(conditionVar, NotificationTimeout), "No push notification received.");
         }
         Assert.AreEqual(PushNotificationType.SyncCipherCreate, notificationMessage.Type);
         Assert.AreEqual(typeof(SyncCipherPushNotificationModel), notificationMessage.Payload.GetType());
@@ -1007,7 +1020,7 @@ public sealed class SharpWardenTest
                 ClearString = "UserNameUpdate"
             };
             cipherItem = VaultWebClient.UpdateCipherItemAsync(cipherItem.Id.Value, cipherItem).GetAwaiter().GetResult();
-            Monitor.Wait(conditionVar);
+            Assert.IsTrue(Monitor.Wait(conditionVar, NotificationTimeout), "No push notification received.");
         }
         Assert.AreEqual(PushNotificationType.SyncCipherUpdate, notificationMessage.Type);
         Assert.AreEqual(typeof(SyncCipherPushNotificationModel), notificationMessage.Payload.GetType());
@@ -1016,7 +1029,7 @@ public sealed class SharpWardenTest
         lock (conditionVar)
         {
             VaultWebClient.DeleteCipherItemAsync(cipherItem.Id.Value).GetAwaiter().GetResult();
-            Monitor.Wait(conditionVar);
+            Assert.IsTrue(Monitor.Wait(conditionVar, NotificationTimeout), "No push notification received.");
         }
         Assert.AreEqual(PushNotificationType.SyncLoginDelete, notificationMessage.Type);
         Assert.AreEqual(typeof(SyncCipherPushNotificationModel), notificationMessage.Payload.GetType());
@@ -1027,7 +1040,7 @@ public sealed class SharpWardenTest
         {
             encryptedString.ClearString = "TestNotificationFolder";
             folder = VaultWebClient.CreateFolderAsync(encryptedString.CipherString).GetAwaiter().GetResult();
-            Monitor.Wait(conditionVar);
+            Assert.IsTrue(Monitor.Wait(conditionVar, NotificationTimeout), "No push notification received.");
         }
         Assert.AreEqual(PushNotificationType.SyncFolderCreate, notificationMessage.Type);
         Assert.AreEqual(typeof(SyncFolderPushNotificationModel), notificationMessage.Payload.GetType());
@@ -1037,7 +1050,7 @@ public sealed class SharpWardenTest
         {
             encryptedString.ClearString = "TestNotificationFolderNewName";
             folder = VaultWebClient.UpdateFolderAsync(folder.Id.Value, encryptedString.CipherString).GetAwaiter().GetResult();
-            Monitor.Wait(conditionVar);
+            Assert.IsTrue(Monitor.Wait(conditionVar, NotificationTimeout), "No push notification received.");
         }
         Assert.AreEqual(PushNotificationType.SyncFolderUpdate, notificationMessage.Type);
         Assert.AreEqual(typeof(SyncFolderPushNotificationModel), notificationMessage.Payload.GetType());
@@ -1046,7 +1059,7 @@ public sealed class SharpWardenTest
         lock (conditionVar)
         {
             VaultWebClient.DeleteFolderAsync(folder.Id.Value).GetAwaiter().GetResult();
-            Monitor.Wait(conditionVar);
+            Assert.IsTrue(Monitor.Wait(conditionVar, NotificationTimeout), "No push notification received.");
         }
         Assert.AreEqual(PushNotificationType.SyncFolderDelete, notificationMessage.Type);
         Assert.AreEqual(typeof(SyncFolderPushNotificationModel), notificationMessage.Payload.GetType());

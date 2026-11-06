@@ -1,0 +1,16 @@
+{
+  "hostUrl": "https://vault.bitwarden.eu",
+  "notificationUrl": "wss://notifications.bitwarden.eu",
+  "userItemId": "1de1488c-f980-446a-bb5a-b30201265744",
+  "userFolderId": "01c15505-4683-48c2-a3fb-b302013ba7a0",
+  "userItemInFolderId": "348270df-0c8e-4e05-8997-b30201427190",
+  "userItemLoginId": "a65b2d2d-cd0a-4640-a778-b302014444c9",
+  "userItemCardId": "1db665ae-2e24-426c-83d8-b302014703a5",
+  "userItemIdentityId": "e5f3057c-1728-41a6-96dd-b302014a783c",
+  "userItemSecureNoteId": "be880b58-d562-4c4a-8abf-b302015348b6",
+  "userItemSSHKeyId": "5221df17-19e4-408b-b27f-b30201547789",
+  "userItemCustomFieldsId": "c59db8cb-3036-49cb-a16d-b307006c213d",
+  "organizationId": "9dab2223-5ee2-480d-ace2-b3020126075b",
+  "organizationCollectionId": "16a3dadf-cfa3-4bab-a097-b30201260764",
+  "organizationItemId": "2c94bf3f-fcfe-48eb-b19c-b307006b69be"
+}
