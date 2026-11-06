@@ -384,6 +384,8 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         apiModel.Favorite = itemModel.Favorite;
         apiModel.FolderId = itemModel.FolderId;
         apiModel.OrganizationId = itemModel.OrganizationId;
+        apiModel.EncryptedFor = UserId;
+        apiModel.Key = itemModel.Key;
         apiModel.Fields = itemModel.Fields == null ? null : new List<CustomFieldAPIModel>(itemModel.Fields.Select(e => new CustomFieldAPIModel
         {
             Type = e.Type,
