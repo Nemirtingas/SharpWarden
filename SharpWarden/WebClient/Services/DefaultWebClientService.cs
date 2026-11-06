@@ -4,6 +4,7 @@
 // See LICENSE.txt in the project root for more information.
 
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using SharpWarden.BitWardenWebSession.Models;
@@ -37,6 +38,12 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
     private const int AuthTokenExpirationThreshold = 60;
 
+    // Library version without the "+commit" build metadata, e.g. "0.9.0".
+    private static readonly string LibraryVersion =
+        (typeof(DefaultWebClientService).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            ?? typeof(DefaultWebClientService).Assembly.GetName().Version?.ToString(3)
+            ?? "0.0.0").Split('+')[0];
+
     /// <summary>
     /// If <paramref name="deviceVersion"/> is not at least <see cref="SSHKeyCipherMinimumVersion"/>, ssh keys will not be returned by <see cref="GetDatabaseAsync"/>.
     /// </summary>
@@ -64,7 +71,9 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         _httpClient = new HttpClient();
         _baseUrl = bitwardenHostUrl.TrimEnd('/');
         _baseUri = new Uri(_baseUrl + "/");
-        _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:138.0) Gecko/20100101 Firefox/138.0");
+        // Identify honestly as SharpWarden instead of impersonating a browser.
+        // Bitwarden-Client-Name/Version are kept: the server uses them to enable features (e.g. SSH keys).
+        _httpClient.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("SharpWarden", LibraryVersion));
         _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("device-type", $"{(int)DeviceType.Sdk}");
         _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Bitwarden-Client-Name", "web");
         _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Bitwarden-Client-Version", deviceVersion);

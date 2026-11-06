@@ -33,10 +33,10 @@ jobs:
         run: dotnet restore SharpWarden/SharpWarden.csproj
 
       - name: Build SharpWarden
-        run: dotnet build SharpWarden/SharpWarden.csproj --configuration Release --no-restore
+        run: dotnet build SharpWarden/SharpWarden.csproj --configuration Release --no-restore /p:Version=${VERSION}
 
       - name: Pack NuGet package
-        run: dotnet pack SharpWarden/SharpWarden.csproj --configuration Release --no-build -o ./nupkg /p:PackageVersion=${VERSION}
+        run: dotnet pack SharpWarden/SharpWarden.csproj --configuration Release --no-build -o ./nupkg /p:Version=${VERSION}
 
       # Trusted Publishing: exchange the GitHub OIDC token for a short-lived (1 hour) NuGet API key.
       # Requires a Trusted Publishing policy on nuget.org (owner: Nemirtingas, repository: SharpWarden, workflow: nuget.yml).
