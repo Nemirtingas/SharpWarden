@@ -11,6 +11,12 @@ on:
     branches:
       - main
       - sensitive/*
+  # Daily run on main: detects when a server update (Bitwarden, Vaultwarden) or a new .NET SDK breaks the library,
+  # even when nobody pushes. GitHub notifies the last person who changed this cron when a scheduled run fails.
+  schedule:
+    - cron: '17 5 * * *'
+  # Manual run from the Actions tab.
+  workflow_dispatch:
 
 # The job only needs to read the repository: never give write access to a job that handles the test account secrets.
 permissions:
@@ -52,14 +58,20 @@ jobs:
   # Same tests against a throwaway Vaultwarden. No secret needed: the account and its data are
   # created by SharpWarden.Tests.Seed, so this job also runs on pull requests from forks and Dependabot.
   test-vaultwarden:
-    name: Run unit tests (Vaultwarden)
+    name: Run unit tests (Vaultwarden ${{ matrix.vaultwarden }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    strategy:
+      fail-fast: false
+      matrix:
+        # The pinned version (not updated by Dependabot: bump it manually). Scheduled and manual runs also
+        # test the latest release, to see a breaking Vaultwarden change before upgrading.
+        vaultwarden: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '["1.37.5", "latest"]' || '["1.37.5"]') }}
+
     services:
       vaultwarden:
-        # Not updated by Dependabot: bump it manually.
-        image: vaultwarden/server:1.37.5
+        image: vaultwarden/server:${{ matrix.vaultwarden }}
         env:
           SIGNUPS_ALLOWED: 'true'
           # Throwaway server: without this, Vaultwarden refuses to start in a container without a volume.
