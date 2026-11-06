@@ -19,6 +19,20 @@ public abstract class CipherItemBaseRequestAPIModel
     [JsonProperty("organizationId")]
     public Guid? OrganizationId { get; set; }
 
+    /// <summary>
+    /// Id of the user whose keys encrypted the cipher. Required by recent servers
+    /// (Vaultwarden rejects create/update requests without it with a 422).
+    /// </summary>
+    [JsonProperty("encryptedFor")]
+    public Guid? EncryptedFor { get; set; }
+
+    /// <summary>
+    /// Per-cipher encryption key. Must be sent back on update: the server replaces the stored key
+    /// with this value, so omitting it would make a cipher created by another client unreadable.
+    /// </summary>
+    [JsonProperty("key")]
+    public string Key { get; set; }
+
     [JsonProperty("name")]
     public string Name { get; set; }
 
@@ -33,6 +47,12 @@ public abstract class CipherItemBaseRequestAPIModel
 
     [JsonProperty("favorite")]
     public bool Favorite { get; set; }
+
+    /// <summary>
+    /// Must be sent back on update: the server unarchives the cipher when it is missing.
+    /// </summary>
+    [JsonProperty("archivedDate")]
+    public DateTime? ArchivedDate { get; set; }
 
     [JsonProperty("lastKnownRevisionDate")]
     public DateTime? LastKnownRevisionDate { get; set; }

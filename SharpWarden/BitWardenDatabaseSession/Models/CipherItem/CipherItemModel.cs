@@ -25,7 +25,8 @@ public class CipherItemModel : ISessionAware
 
     public void SetCryptoService(IUserCryptoService cryptoService)
     {
-        _conditionalCryptoService ??= new ConditionalCryptoService(cryptoService.KeyProviderService, () => this.OrganizationId);
+        // When the cipher has its own key ("key"), its fields and attachments are encrypted with it.
+        _conditionalCryptoService ??= new ConditionalCryptoService(cryptoService.KeyProviderService, () => this.OrganizationId, () => this.Key);
         _conditionalCryptoService.CryptoService = cryptoService;
 
         Card?.SetCryptoService(_conditionalCryptoService);
@@ -101,6 +102,9 @@ public class CipherItemModel : ISessionAware
 
     [JsonProperty("deletedDate")]
     public DateTime? DeletedDate { get; set; }
+
+    [JsonProperty("archivedDate")]
+    public DateTime? ArchivedDate { get; set; }
 
     [JsonProperty("edit")]
     public bool Edit { get; set; }

@@ -28,6 +28,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
     private readonly HttpClient _httpClient;
     private LoginModel _webSession;
     private string _username;
+    private Guid? _userId;
     private readonly ISessionJsonConverterService _jsonSerializer;
     private readonly string _baseUrl;
     private readonly Uri _baseUri;
@@ -134,6 +135,24 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
     public Guid DeviceId => _guid;
 
+    public Guid UserId => _userId ?? throw new InvalidOperationException("Not authenticated: the user id is not known yet.");
+
+    private void _ApplyAccessToken()
+    {
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _webSession.AccessToken);
+    }
+
+    // The token endpoint does not return the user id, the profile does.
+    // Also refresh the user keys, which are not returned by every grant type.
+    private async Task _LoadAccountProfileAsync()
+    {
+        var profile = await GetAccountProfileAsync().ConfigureAwait(false);
+
+        _userId = profile.Id ?? throw new InvalidDataException("The account profile has no user id.");
+        _webSession.Key = profile.Key.CipherString;
+        _webSession.PrivateKey = profile.PrivateKey.CipherString;
+    }
+
     // Not sure how to make this work, it always returns false.
     //public async Task<bool> KnownDeviceAsync(string username)
     //{
@@ -218,7 +237,8 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         _webSession = _Deserialize<LoginModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
         ExpiresAt = responseAt.AddSeconds(_webSession.ExpiresIn - AuthTokenExpirationThreshold);
 
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _webSession.AccessToken);
+        _ApplyAccessToken();
+        await _LoadAccountProfileAsync().ConfigureAwait(false);
     }
 
     public async Task AuthenticateWithRefreshTokenAsync(string refreshToken)
@@ -241,12 +261,8 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         _webSession.UpdateSession(_Deserialize<RefreshModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false)));
         ExpiresAt = responseAt.AddSeconds(_webSession.ExpiresIn - AuthTokenExpirationThreshold);
 
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _webSession.AccessToken);
-
-        var profile = await GetAccountProfileAsync().ConfigureAwait(false);
-
-        _webSession.Key = profile.Key.CipherString;
-        _webSession.PrivateKey = profile.PrivateKey.CipherString;
+        _ApplyAccessToken();
+        await _LoadAccountProfileAsync().ConfigureAwait(false);
     }
 
     public async Task AuthenticateWithApiKeyAsync(string clientId, string clientSecret)
@@ -270,12 +286,8 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         _webSession.UpdateSession(_Deserialize<ApiKeyLoginModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false)));
         ExpiresAt = responseAt.AddSeconds(_webSession.ExpiresIn - AuthTokenExpirationThreshold);
 
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _webSession.AccessToken);
-
-        var profile = await GetAccountProfileAsync().ConfigureAwait(false);
-
-        _webSession.Key = profile.Key.CipherString;
-        _webSession.PrivateKey = profile.PrivateKey.CipherString;
+        _ApplyAccessToken();
+        await _LoadAccountProfileAsync().ConfigureAwait(false);
     }
 
     #region Common API
@@ -381,6 +393,9 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         apiModel.Favorite = itemModel.Favorite;
         apiModel.FolderId = itemModel.FolderId;
         apiModel.OrganizationId = itemModel.OrganizationId;
+        apiModel.EncryptedFor = UserId;
+        apiModel.Key = itemModel.Key;
+        apiModel.ArchivedDate = itemModel.ArchivedDate;
         apiModel.Fields = itemModel.Fields == null ? null : new List<CustomFieldAPIModel>(itemModel.Fields.Select(e => new CustomFieldAPIModel
         {
             Type = e.Type,
@@ -753,8 +768,8 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         var apiModel = new CollectionCreateRequestAPIModel
         {
             Name = encryptedName,
-            Users = users,
-            Groups = groups
+            Users = users ?? [], // Vaultwarden requires both lists, even when empty.
+            Groups = groups ?? [],
         };
 
         return await _CreateAPIAsync<CollectionItemModel, CollectionCreateRequestAPIModel>($"{_baseUrl}{OrganizationsApiPath}/{organizationId}/collections", apiModel).ConfigureAwait(false);

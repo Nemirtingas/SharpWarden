@@ -36,6 +36,11 @@ public interface IWebClientService
     /// </summary>
     public Guid DeviceId { get; }
 
+    /// <summary>
+    /// Id of the authenticated user (read from the access token).
+    /// </summary>
+    public Guid UserId { get; }
+
     public Task PreloginAsync(string username);
 
     public Task AuthenticateAsync(string password);
