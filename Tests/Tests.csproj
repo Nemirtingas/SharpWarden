@@ -20,4 +20,8 @@
     <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="TestConfig.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

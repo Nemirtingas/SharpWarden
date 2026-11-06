@@ -18,8 +18,9 @@ permissions:
 
 jobs:
   test:
-    name: Run unit tests
+    name: Run unit tests (Bitwarden EU)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
 
@@ -46,4 +47,47 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Run Tests
-        run: dotnet test Tests/Tests.csproj --verbosity normal
+        run: dotnet test Tests/Tests.csproj --verbosity normal
+
+  # Same tests against a throwaway Vaultwarden. No secret needed: the account and its data are
+  # created by Tests.Seed, so this job also runs on pull requests from forks and Dependabot.
+  test-vaultwarden:
+    name: Run unit tests (Vaultwarden)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      vaultwarden:
+        # Not updated by Dependabot: bump it manually.
+        image: vaultwarden/server:1.37.5
+        env:
+          SIGNUPS_ALLOWED: 'true'
+          # Throwaway server: without this, Vaultwarden refuses to start in a container without a volume.
+          I_REALLY_WANT_VOLATILE_STORAGE: 'true'
+          DOMAIN: http://localhost:8080
+        ports:
+          - 8080:80
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      # Argon2id account: the Bitwarden EU job covers PBKDF2.
+      - name: Seed Vaultwarden
+        run: dotnet run --project Tests.Seed --configuration Release --no-build -- http://localhost:8080 "$RUNNER_TEMP/vaultwarden-test-config.json" argon2id
+
+      - name: Run Tests
+        env:
+          SHARP_WARDEN_TEST_CONFIG: ${{ runner.temp }}/vaultwarden-test-config.json
+        run: dotnet test Tests/Tests.csproj --configuration Release --no-build --verbosity normal
