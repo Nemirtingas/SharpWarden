@@ -14,7 +14,7 @@
 
   <ItemGroup>
     <!-- Reuse the configuration model of the tests, so both always match. -->
-    <Compile Include="..\Tests\TestConfig.cs" Link="TestConfig.cs" />
+    <Compile Include="..\SharpWarden.Tests\TestConfig.cs" Link="TestConfig.cs" />
   </ItemGroup>
 
 </Project>

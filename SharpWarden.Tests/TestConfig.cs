@@ -2,12 +2,12 @@
 
 using Newtonsoft.Json;
 
-namespace Tests;
+namespace SharpWarden.Tests;
 
 /// <summary>
 /// Server and test data used by <see cref="SharpWardenTest"/>.
 /// Loaded from the file given by SHARP_WARDEN_TEST_CONFIG, or TestConfig.json (the Bitwarden EU test account).
-/// A fresh Vaultwarden can be seeded with Tests.Seed, which writes a matching configuration file.
+/// A fresh Vaultwarden can be seeded with SharpWarden.Tests.Seed, which writes a matching configuration file.
 /// </summary>
 public sealed class TestConfig
 {
