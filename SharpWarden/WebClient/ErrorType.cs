@@ -12,4 +12,9 @@ public enum ErrorType
     Unknown,
     [EnumMember(Value = "device_error")]
     DeviceError,
+    // Wrong credentials (password, API key or refresh token).
+    [EnumMember(Value = "invalid_grant")]
+    InvalidGrant,
+    [EnumMember(Value = "invalid_client")]
+    InvalidClient,
 }

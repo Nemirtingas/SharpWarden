@@ -110,8 +110,9 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         var content = new FormUrlEncodedContent(parameters);
         var response = await _httpClient.PostAsync($"{_baseUrl}/identity/connect/token", content).ConfigureAwait(false);
 
+        // 400 is handled by the caller (new device verification).
         if (response.StatusCode != System.Net.HttpStatusCode.BadRequest)
-            response.EnsureSuccessStatusCode();
+            await _EnsureSuccessAsync(response).ConfigureAwait(false);
 
         return response;
     }
@@ -160,8 +161,8 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(username);
 
         var content = new StringContent(new JObject { { "email", username } }.ToString(), new UTF8Encoding(false), "application/json");
-        var response = await _httpClient.PostAsync($"{_baseUrl}/identity/accounts/prelogin", content).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        using var response = await _httpClient.PostAsync($"{_baseUrl}/identity/accounts/prelogin", content).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response).ConfigureAwait(false);
 
         var preLogin = _Deserialize<PreLoginModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
         if (preLogin.Kdf != KdfType.PBKDF2SHA256)
@@ -204,28 +205,25 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         var responseAt = DateTime.UtcNow;
         if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
         {
-            var genericError = _Deserialize<ErrorResponseModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
-            if (genericError.ErrorType == ErrorType.DeviceError && newDeviceOtpAsyncCallback != null)
-            {
-                var otp = await newDeviceOtpAsyncCallback().ConfigureAwait(false);
-                if (string.IsNullOrWhiteSpace(otp))
-                    throw new BitWardenHttpRequestException(genericError.ErrorType ?? ErrorType.Unknown, genericError.Description);
+            BitWardenHttpRequestException error;
+            using (response)
+                error = await BitWardenHttpRequestException.FromResponseAsync(response).ConfigureAwait(false);
 
-                response = await _PostAuthenticateAsync(passwordBytes, otp).ConfigureAwait(false);
-                responseAt = DateTime.UtcNow;
-                if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
-                {
-                    genericError = _Deserialize<ErrorResponseModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
-                    throw new BitWardenHttpRequestException(genericError.ErrorType ?? ErrorType.Unknown, genericError.Description);
-                }
-            }
-            else
-            {
-                throw new BitWardenHttpRequestException(genericError.ErrorType ?? ErrorType.Unknown, genericError.Description);
-            }
+            if (error.ErrorType != ErrorType.DeviceError || newDeviceOtpAsyncCallback == null)
+                throw error;
+
+            var otp = await newDeviceOtpAsyncCallback().ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(otp))
+                throw error;
+
+            response = await _PostAuthenticateAsync(passwordBytes, otp).ConfigureAwait(false);
+            responseAt = DateTime.UtcNow;
+            if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                await _EnsureSuccessAsync(response).ConfigureAwait(false);
         }
 
-        _webSession = _Deserialize<LoginModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
+        using (response)
+            _webSession = _Deserialize<LoginModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
         ExpiresAt = responseAt.AddSeconds(_webSession.ExpiresIn - AuthTokenExpirationThreshold);
 
         _ApplyAccessToken();
@@ -245,9 +243,9 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
         var content = new FormUrlEncodedContent(parameters);
 
-        var response = await _httpClient.PostAsync($"{_baseUrl}/identity/connect/token", content).ConfigureAwait(false);
+        using var response = await _httpClient.PostAsync($"{_baseUrl}/identity/connect/token", content).ConfigureAwait(false);
         var responseAt = DateTime.UtcNow;
-        response.EnsureSuccessStatusCode();
+        await _EnsureSuccessAsync(response).ConfigureAwait(false);
 
         _webSession.UpdateSession(_Deserialize<RefreshModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false)));
         ExpiresAt = responseAt.AddSeconds(_webSession.ExpiresIn - AuthTokenExpirationThreshold);
@@ -270,9 +268,9 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
         var content = new FormUrlEncodedContent(parameters);
 
-        var response = await _httpClient.PostAsync($"{_baseUrl}/identity/connect/token", content).ConfigureAwait(false);
+        using var response = await _httpClient.PostAsync($"{_baseUrl}/identity/connect/token", content).ConfigureAwait(false);
         var responseAt = DateTime.UtcNow;
-        response.EnsureSuccessStatusCode();
+        await _EnsureSuccessAsync(response).ConfigureAwait(false);
 
         _webSession.UpdateSession(_Deserialize<ApiKeyLoginModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false)));
         ExpiresAt = responseAt.AddSeconds(_webSession.ExpiresIn - AuthTokenExpirationThreshold);
@@ -283,25 +281,36 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
     #region Common API
 
+    // Throws a BitWardenHttpRequestException carrying the server error message when the request failed.
+    private static async Task _EnsureSuccessAsync(HttpResponseMessage response)
+    {
+        if (response.IsSuccessStatusCode)
+            return;
+
+        using (response)
+            throw await BitWardenHttpRequestException.FromResponseAsync(response).ConfigureAwait(false);
+    }
+
     private async Task<Stream> _GetAPIAsync(string apiPath)
     {
+        // The returned stream belongs to the response: it is not disposed here.
         var response = await _httpClient.GetAsync(apiPath).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        await _EnsureSuccessAsync(response).ConfigureAwait(false);
         return await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
     }
 
     private async Task<T> _GetAPIAsync<T>(string apiPath)
     {
-        var response = await _httpClient.GetAsync(apiPath).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        using var response = await _httpClient.GetAsync(apiPath).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response).ConfigureAwait(false);
         var result = _Deserialize<T>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
         return result;
     }
 
     private async Task<ApiResultModel<List<T>>> _GetAllAPIAsync<T>(string apiPath) where T : ISessionAware
     {
-        var response = await _httpClient.GetAsync(apiPath).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        using var response = await _httpClient.GetAsync(apiPath).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response).ConfigureAwait(false);
         var result = _Deserialize<ApiResultModel<List<T>>>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
 
         return result;
@@ -311,8 +320,8 @@ public class DefaultWebClientService : IWebClientService, IDisposable
     {
         var content = _APIModelToContent(apiModel);
 
-        var response = await _httpClient.PostAsync(apiPath, content).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        using var response = await _httpClient.PostAsync(apiPath, content).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response).ConfigureAwait(false);
         var result = _Deserialize<TReturn>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
         return result;
     }
@@ -321,8 +330,8 @@ public class DefaultWebClientService : IWebClientService, IDisposable
     {
         var content = _APIModelToContent(apiModel);
 
-        var response = await _httpClient.PutAsync($"{apiPath}/{id}", content).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        using var response = await _httpClient.PutAsync($"{apiPath}/{id}", content).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response).ConfigureAwait(false);
         var result = _Deserialize<TReturn>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
         return result;
     }
@@ -334,28 +343,28 @@ public class DefaultWebClientService : IWebClientService, IDisposable
             CollectionIds = newCollectionIds.ToList()
         });
 
-        var response = await _httpClient.PutAsync($"{apiPath}", content).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        using var response = await _httpClient.PutAsync($"{apiPath}", content).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response).ConfigureAwait(false);
         var result = _Deserialize<CipherItemUpdateCollectionsResponseAPIModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
         return result.Cipher;
     }
 
     private async Task _MoveTrashAPIAsync(string apiPath)
     {
-        var response = await _httpClient.PutAsync($"{apiPath}", null).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        using var response = await _httpClient.PutAsync($"{apiPath}", null).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response).ConfigureAwait(false);
     }
 
     private async Task _RestoreAPIAsync(string apiPath)
     {
-        var response = await _httpClient.PutAsync($"{apiPath}", null).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        using var response = await _httpClient.PutAsync($"{apiPath}", null).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response).ConfigureAwait(false);
     }
 
     private async Task _DeleteAPIAsync(string apiPath)
     {
-        var response = await _httpClient.DeleteAsync(apiPath).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        using var response = await _httpClient.DeleteAsync(apiPath).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response).ConfigureAwait(false);
     }
 
     private async Task _MultiDeleteAPIAsync(string apiPath, IEnumerable<Guid> ids)
@@ -367,8 +376,8 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
         var content = _APIModelToContent(apiModel);
 
-        var response = await _httpClient.PutAsync($"{apiPath}/delete", content).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        using var response = await _httpClient.PutAsync($"{apiPath}/delete", content).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response).ConfigureAwait(false);
     }
 
     #endregion
@@ -579,9 +588,12 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
         var content = _APIModelToContent(createAttachmentModel);
 
-        var response = await _httpClient.PostAsync($"{_baseUrl}{CiphersApiPath}/{id}/attachment/v2", content).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-        var newAttachment = _Deserialize<CreateCipherItemAttachmentResponseAPIResultModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
+        CreateCipherItemAttachmentResponseAPIResultModel newAttachment;
+        using (var response = await _httpClient.PostAsync($"{_baseUrl}{CiphersApiPath}/{id}/attachment/v2", content).ConfigureAwait(false))
+        {
+            await _EnsureSuccessAsync(response).ConfigureAwait(false);
+            newAttachment = _Deserialize<CreateCipherItemAttachmentResponseAPIResultModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
+        }
         try
         {
             using var form = new MultipartFormDataContent();
@@ -591,8 +603,8 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
             form.Add(fileContent, "data", encryptedFileName);
 
-            response = await _httpClient.PostAsync($"{_baseUrl}{CiphersApiPath}/{id}/attachment/{Uri.EscapeDataString(newAttachment.AttachmentId)}", form).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
+            using var response = await _httpClient.PostAsync($"{_baseUrl}{CiphersApiPath}/{id}/attachment/{Uri.EscapeDataString(newAttachment.AttachmentId)}", form).ConfigureAwait(false);
+            await _EnsureSuccessAsync(response).ConfigureAwait(false);
         }
         catch
         {
@@ -744,8 +756,8 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
     public async Task DeleteAllFolderAsync()
     {
-        var response = await _httpClient.DeleteAsync($"{_baseUrl}{FoldersApiPath}/all").ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        using var response = await _httpClient.DeleteAsync($"{_baseUrl}{FoldersApiPath}/all").ConfigureAwait(false);
+        await _EnsureSuccessAsync(response).ConfigureAwait(false);
     }
 
     #endregion
@@ -796,7 +808,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
             throw new InvalidDataException("Refusing to download an attachment from a non https external url.");
 
         var response = await AnonymousHttpClient.GetAsync(attachmentUri).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        await _EnsureSuccessAsync(response).ConfigureAwait(false);
         return await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
     }
 
