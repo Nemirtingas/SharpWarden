@@ -1,0 +1,36 @@
+version: 2
+
+updates:
+  # NuGet packages (library, tests and examples, discovered from the solution).
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      # Microsoft.AspNetCore.* / Microsoft.Extensions.* are released together, update them in one PR.
+      microsoft:
+        patterns:
+          - "Microsoft.AspNetCore.*"
+          - "Microsoft.Extensions.*"
+      tests:
+        patterns:
+          - "MSTest*"
+          - "Microsoft.NET.Test.Sdk"
+    ignore:
+      # Major versions of these packages follow the .NET major version (e.g. 11.x requires net11.0).
+      # Upgrade them manually together with the TargetFramework.
+      - dependency-name: "Microsoft.AspNetCore.*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.Extensions.*"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions used by the workflows.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns:
+          - "*"
