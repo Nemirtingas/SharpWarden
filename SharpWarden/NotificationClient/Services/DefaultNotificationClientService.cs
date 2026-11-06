@@ -155,7 +155,7 @@ public class DefaultNotificationClientService : INotificationClientService, IDis
             .Select(handler => handler(message) ?? Task.CompletedTask)).ConfigureAwait(false);
     }
 
-    public async Task StopAsync()
+    public async Task StopAsync(CancellationToken cancellationToken = default)
     {
         ResetEventSubscribers();
 
@@ -164,7 +164,7 @@ public class DefaultNotificationClientService : INotificationClientService, IDis
         _hubConnection = null;
         if (hubConnection != null)
         {
-            await hubConnection.StopAsync().ConfigureAwait(false);
+            await hubConnection.StopAsync(cancellationToken).ConfigureAwait(false);
             await hubConnection.DisposeAsync().ConfigureAwait(false);
         }
     }

@@ -40,6 +40,6 @@ public interface IVaultService
     /// <param name="key"></param>
     /// <param name="output"></param>
     /// <returns></returns>
-    Task DecryptAttachmentAsync(Stream cryptedAttachment, byte[] key, Stream output);
-    Task EncryptAttachmentAsync(Stream clearAttachment, byte[] key, Stream output);
+    Task DecryptAttachmentAsync(Stream cryptedAttachment, byte[] key, Stream output, CancellationToken cancellationToken = default);
+    Task EncryptAttachmentAsync(Stream clearAttachment, byte[] key, Stream output, CancellationToken cancellationToken = default);
 }

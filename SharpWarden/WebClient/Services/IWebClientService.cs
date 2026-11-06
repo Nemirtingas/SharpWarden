@@ -41,9 +41,9 @@ public interface IWebClientService
     /// </summary>
     public Guid UserId { get; }
 
-    public Task PreloginAsync(string username);
+    public Task PreloginAsync(string username, CancellationToken cancellationToken = default);
 
-    public Task AuthenticateAsync(string password);
+    public Task AuthenticateAsync(string password, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// </summary>
@@ -52,21 +52,21 @@ public interface IWebClientService
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
     /// <exception cref="BitWardenHttpRequestException"></exception>
-    public Task AuthenticateAsync(string password, Func<Task<string>> newDeviceOtpAsyncCallback);
+    public Task AuthenticateAsync(string password, Func<Task<string>> newDeviceOtpAsyncCallback, CancellationToken cancellationToken = default);
 
-    public Task AuthenticateWithRefreshTokenAsync(string refreshToken);
+    public Task AuthenticateWithRefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default);
 
-    public Task AuthenticateWithApiKeyAsync(string clientId, string clientSecret);
+    public Task AuthenticateWithApiKeyAsync(string clientId, string clientSecret, CancellationToken cancellationToken = default);
 
-    public Task<CipherItemModel> GetCipherItemAsync(Guid id);
+    public Task<CipherItemModel> GetCipherItemAsync(Guid id, CancellationToken cancellationToken = default);
 
-    public Task<List<CipherItemModel>> GetCipherItemsAsync();
+    public Task<List<CipherItemModel>> GetCipherItemsAsync(CancellationToken cancellationToken = default);
 
-    public Task<AttachmentModel> GetCipherItemAttachmentAsync(Guid id, string attachmentId);
+    public Task<AttachmentModel> GetCipherItemAttachmentAsync(Guid id, string attachmentId, CancellationToken cancellationToken = default);
 
-    public Task<AttachmentModel> CreateCipherItemAttachmentAsync(Guid id, string encryptedFileName, string encryptedKey, Stream attachmentStream);
+    public Task<AttachmentModel> CreateCipherItemAttachmentAsync(Guid id, string encryptedFileName, string encryptedKey, Stream attachmentStream, CancellationToken cancellationToken = default);
 
-    public Task DeleteCipherItemAttachmentAsync(Guid id, string attachmentId);
+    public Task DeleteCipherItemAttachmentAsync(Guid id, string attachmentId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Creates an user item. Can also be used to create an organization item but you will need to provide the OrganizationId AND at least one CollectionId. 
@@ -74,7 +74,7 @@ public interface IWebClientService
     /// <param name="cipherItem"></param>
     /// <returns></returns>
     /// <exception cref="InvalidDataException"></exception>
-    public Task<CipherItemModel> CreateCipherItemAsync(CipherItemModel cipherItem);
+    public Task<CipherItemModel> CreateCipherItemAsync(CipherItemModel cipherItem, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Create an organization item.
@@ -83,43 +83,43 @@ public interface IWebClientService
     /// <param name="collectionIds"></param>
     /// <returns></returns>
     /// <exception cref="InvalidDataException"></exception>
-    public Task<CipherItemModel> CreateOrganizationCipherItemAsync(CipherItemModel cipherItem, IEnumerable<Guid> collectionIds);
+    public Task<CipherItemModel> CreateOrganizationCipherItemAsync(CipherItemModel cipherItem, IEnumerable<Guid> collectionIds, CancellationToken cancellationToken = default);
 
-    public Task<CipherItemModel> UpdateCipherItemAsync(Guid id, CipherItemModel cipherItem);
+    public Task<CipherItemModel> UpdateCipherItemAsync(Guid id, CipherItemModel cipherItem, CancellationToken cancellationToken = default);
 
-    public Task<CipherItemModel> UpdateCipherItemCollectionsAsync(Guid id, List<Guid> newCollections);
+    public Task<CipherItemModel> UpdateCipherItemCollectionsAsync(Guid id, List<Guid> newCollections, CancellationToken cancellationToken = default);
 
-    public Task MoveToTrashCipherItemAsync(Guid id);
+    public Task MoveToTrashCipherItemAsync(Guid id, CancellationToken cancellationToken = default);
 
-    public Task RestoreCipherItemAsync(Guid id);
+    public Task RestoreCipherItemAsync(Guid id, CancellationToken cancellationToken = default);
 
-    public Task DeleteCipherItemAsync(Guid id);
+    public Task DeleteCipherItemAsync(Guid id, CancellationToken cancellationToken = default);
 
-    public Task DeleteCipherItemsAsync(IEnumerable<Guid> ids);
+    public Task DeleteCipherItemsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
 
-    public Task<FolderItemModel> GetFolderAsync(Guid id);
+    public Task<FolderItemModel> GetFolderAsync(Guid id, CancellationToken cancellationToken = default);
 
-    public Task<List<FolderItemModel>> GetFoldersAsync();
+    public Task<List<FolderItemModel>> GetFoldersAsync(CancellationToken cancellationToken = default);
 
-    public Task<FolderItemModel> CreateFolderAsync(string encryptedName);
+    public Task<FolderItemModel> CreateFolderAsync(string encryptedName, CancellationToken cancellationToken = default);
 
-    public Task<FolderItemModel> UpdateFolderAsync(Guid id, string encryptedName);
+    public Task<FolderItemModel> UpdateFolderAsync(Guid id, string encryptedName, CancellationToken cancellationToken = default);
 
-    public Task DeleteFolderAsync(Guid id);
+    public Task DeleteFolderAsync(Guid id, CancellationToken cancellationToken = default);
 
-    public Task DeleteFoldersAsync(IEnumerable<Guid> ids);
+    public Task DeleteFoldersAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default);
 
-    public Task DeleteAllFolderAsync();
+    public Task DeleteAllFolderAsync(CancellationToken cancellationToken = default);
 
-    public Task<CollectionItemModel> CreateCollectionAsync(Guid organizationId, string encryptedName, List<UserCollectionPermissionsModel> users, List<UserCollectionPermissionsModel> groups);
+    public Task<CollectionItemModel> CreateCollectionAsync(Guid organizationId, string encryptedName, List<UserCollectionPermissionsModel> users, List<UserCollectionPermissionsModel> groups, CancellationToken cancellationToken = default);
 
-    public Task<List<CollectionItemModel>> GetCollectionsAsync(Guid organizationId);
+    public Task<List<CollectionItemModel>> GetCollectionsAsync(Guid organizationId, CancellationToken cancellationToken = default);
 
-    public Task DeleteCollectionAsync(Guid organizationId, Guid collectionId);
+    public Task DeleteCollectionAsync(Guid organizationId, Guid collectionId, CancellationToken cancellationToken = default);
 
-    public Task<Stream> GetAttachmentAsync(AttachmentModel attachment);
+    public Task<Stream> GetAttachmentAsync(AttachmentModel attachment, CancellationToken cancellationToken = default);
 
-    public Task<ProfileItemModel> GetAccountProfileAsync();
+    public Task<ProfileItemModel> GetAccountProfileAsync(CancellationToken cancellationToken = default);
 
-    public Task<DatabaseModel> GetDatabaseAsync(bool excludeDomains = true);
+    public Task<DatabaseModel> GetDatabaseAsync(bool excludeDomains = true, CancellationToken cancellationToken = default);
 }

@@ -82,7 +82,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         return new StringContent(_Serialize(apiModel), Encoding.UTF8, new MediaTypeHeaderValue("application/json", "utf-8"));
     }
 
-    private async Task<HttpResponseMessage> _PostAuthenticateAsync(byte[] passwordBytes, string otp)
+    private async Task<HttpResponseMessage> _PostAuthenticateAsync(byte[] passwordBytes, string otp, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(_username) || !(_webSession?.KdfIterations > 0))
             throw new InvalidOperationException("Prelogin must be called prior to " + nameof(AuthenticateAsync) + " .");
@@ -108,11 +108,11 @@ public class DefaultWebClientService : IWebClientService, IDisposable
             parameters.Add("newDeviceOtp", otp);
 
         var content = new FormUrlEncodedContent(parameters);
-        var response = await _httpClient.PostAsync($"{_baseUrl}/identity/connect/token", content).ConfigureAwait(false);
+        var response = await _httpClient.PostAsync($"{_baseUrl}/identity/connect/token", content, cancellationToken).ConfigureAwait(false);
 
         // 400 is handled by the caller (new device verification).
         if (response.StatusCode != System.Net.HttpStatusCode.BadRequest)
-            await _EnsureSuccessAsync(response).ConfigureAwait(false);
+            await _EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
 
         return response;
     }
@@ -136,9 +136,9 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
     // The token endpoint does not return the user id, the profile does.
     // Also refresh the user keys, which are not returned by every grant type.
-    private async Task _LoadAccountProfileAsync()
+    private async Task _LoadAccountProfileAsync(CancellationToken cancellationToken)
     {
-        var profile = await GetAccountProfileAsync().ConfigureAwait(false);
+        var profile = await GetAccountProfileAsync(cancellationToken).ConfigureAwait(false);
 
         _userId = profile.Id ?? throw new InvalidDataException("The account profile has no user id.");
         _webSession.Key = profile.Key.CipherString;
@@ -156,15 +156,15 @@ public class DefaultWebClientService : IWebClientService, IDisposable
     //    return bool.Parse(await response.Content.ReadAsStringAsync());
     //}
 
-    public async Task PreloginAsync(string username)
+    public async Task PreloginAsync(string username, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(username);
 
         var content = new StringContent(new JObject { { "email", username } }.ToString(), new UTF8Encoding(false), "application/json");
-        using var response = await _httpClient.PostAsync($"{_baseUrl}/identity/accounts/prelogin", content).ConfigureAwait(false);
-        await _EnsureSuccessAsync(response).ConfigureAwait(false);
+        using var response = await _httpClient.PostAsync($"{_baseUrl}/identity/accounts/prelogin", content, cancellationToken).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
 
-        var preLogin = _Deserialize<PreLoginModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
+        var preLogin = _Deserialize<PreLoginModel>(await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false));
         if (preLogin.Kdf != KdfType.PBKDF2SHA256)
             throw new NotSupportedException($"KDF type {preLogin.Kdf} is not supported.");
 
@@ -178,10 +178,10 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         _username = username.Trim().ToLowerInvariant();
     }
 
-    public Task AuthenticateAsync(string password)
-        => AuthenticateAsync(password, null);
+    public Task AuthenticateAsync(string password, CancellationToken cancellationToken = default)
+        => AuthenticateAsync(password, null, cancellationToken);
 
-    public async Task AuthenticateAsync(string password, Func<Task<string>> newDeviceOtpAsyncCallback)
+    public async Task AuthenticateAsync(string password, Func<Task<string>> newDeviceOtpAsyncCallback, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(_username) || !(_webSession?.KdfIterations > 0))
             throw new InvalidOperationException("Prelogin must be called prior to " + nameof(AuthenticateAsync) + " .");
@@ -191,7 +191,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         var passwordBytes = Encoding.UTF8.GetBytes(password);
         try
         {
-            await _AuthenticateAsync(passwordBytes, newDeviceOtpAsyncCallback).ConfigureAwait(false);
+            await _AuthenticateAsync(passwordBytes, newDeviceOtpAsyncCallback, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -199,15 +199,15 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         }
     }
 
-    private async Task _AuthenticateAsync(byte[] passwordBytes, Func<Task<string>> newDeviceOtpAsyncCallback)
+    private async Task _AuthenticateAsync(byte[] passwordBytes, Func<Task<string>> newDeviceOtpAsyncCallback, CancellationToken cancellationToken)
     {
-        var response = await _PostAuthenticateAsync(passwordBytes, null).ConfigureAwait(false);
+        var response = await _PostAuthenticateAsync(passwordBytes, null, cancellationToken).ConfigureAwait(false);
         var responseAt = DateTime.UtcNow;
         if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
         {
             BitWardenHttpRequestException error;
             using (response)
-                error = await BitWardenHttpRequestException.FromResponseAsync(response).ConfigureAwait(false);
+                error = await BitWardenHttpRequestException.FromResponseAsync(response, cancellationToken).ConfigureAwait(false);
 
             if (error.ErrorType != ErrorType.DeviceError || newDeviceOtpAsyncCallback == null)
                 throw error;
@@ -216,21 +216,21 @@ public class DefaultWebClientService : IWebClientService, IDisposable
             if (string.IsNullOrWhiteSpace(otp))
                 throw error;
 
-            response = await _PostAuthenticateAsync(passwordBytes, otp).ConfigureAwait(false);
+            response = await _PostAuthenticateAsync(passwordBytes, otp, cancellationToken).ConfigureAwait(false);
             responseAt = DateTime.UtcNow;
             if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
-                await _EnsureSuccessAsync(response).ConfigureAwait(false);
+                await _EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
         }
 
         using (response)
-            _webSession = _Deserialize<LoginModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
+            _webSession = _Deserialize<LoginModel>(await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false));
         ExpiresAt = responseAt.AddSeconds(_webSession.ExpiresIn - AuthTokenExpirationThreshold);
 
         _ApplyAccessToken();
-        await _LoadAccountProfileAsync().ConfigureAwait(false);
+        await _LoadAccountProfileAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task AuthenticateWithRefreshTokenAsync(string refreshToken)
+    public async Task AuthenticateWithRefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(_username) || !(_webSession?.KdfIterations > 0))
             throw new InvalidOperationException("Prelogin must be called prior to " + nameof(AuthenticateWithRefreshTokenAsync) + " .");
@@ -243,18 +243,18 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
         var content = new FormUrlEncodedContent(parameters);
 
-        using var response = await _httpClient.PostAsync($"{_baseUrl}/identity/connect/token", content).ConfigureAwait(false);
+        using var response = await _httpClient.PostAsync($"{_baseUrl}/identity/connect/token", content, cancellationToken).ConfigureAwait(false);
         var responseAt = DateTime.UtcNow;
-        await _EnsureSuccessAsync(response).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
 
-        _webSession.UpdateSession(_Deserialize<RefreshModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false)));
+        _webSession.UpdateSession(_Deserialize<RefreshModel>(await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false)));
         ExpiresAt = responseAt.AddSeconds(_webSession.ExpiresIn - AuthTokenExpirationThreshold);
 
         _ApplyAccessToken();
-        await _LoadAccountProfileAsync().ConfigureAwait(false);
+        await _LoadAccountProfileAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task AuthenticateWithApiKeyAsync(string clientId, string clientSecret)
+    public async Task AuthenticateWithApiKeyAsync(string clientId, string clientSecret, CancellationToken cancellationToken = default)
     {
         var parameters = new Dictionary<string, string>{
             { "scope"           , "api"                    },
@@ -268,106 +268,106 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
         var content = new FormUrlEncodedContent(parameters);
 
-        using var response = await _httpClient.PostAsync($"{_baseUrl}/identity/connect/token", content).ConfigureAwait(false);
+        using var response = await _httpClient.PostAsync($"{_baseUrl}/identity/connect/token", content, cancellationToken).ConfigureAwait(false);
         var responseAt = DateTime.UtcNow;
-        await _EnsureSuccessAsync(response).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
 
-        _webSession.UpdateSession(_Deserialize<ApiKeyLoginModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false)));
+        _webSession.UpdateSession(_Deserialize<ApiKeyLoginModel>(await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false)));
         ExpiresAt = responseAt.AddSeconds(_webSession.ExpiresIn - AuthTokenExpirationThreshold);
 
         _ApplyAccessToken();
-        await _LoadAccountProfileAsync().ConfigureAwait(false);
+        await _LoadAccountProfileAsync(cancellationToken).ConfigureAwait(false);
     }
 
     #region Common API
 
     // Throws a BitWardenHttpRequestException carrying the server error message when the request failed.
-    private static async Task _EnsureSuccessAsync(HttpResponseMessage response)
+    private static async Task _EnsureSuccessAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
         if (response.IsSuccessStatusCode)
             return;
 
         using (response)
-            throw await BitWardenHttpRequestException.FromResponseAsync(response).ConfigureAwait(false);
+            throw await BitWardenHttpRequestException.FromResponseAsync(response, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<Stream> _GetAPIAsync(string apiPath)
+    private async Task<Stream> _GetAPIAsync(string apiPath, CancellationToken cancellationToken)
     {
         // The returned stream belongs to the response: it is not disposed here.
-        var response = await _httpClient.GetAsync(apiPath).ConfigureAwait(false);
-        await _EnsureSuccessAsync(response).ConfigureAwait(false);
-        return await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+        var response = await _httpClient.GetAsync(apiPath, cancellationToken).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<T> _GetAPIAsync<T>(string apiPath)
+    private async Task<T> _GetAPIAsync<T>(string apiPath, CancellationToken cancellationToken)
     {
-        using var response = await _httpClient.GetAsync(apiPath).ConfigureAwait(false);
-        await _EnsureSuccessAsync(response).ConfigureAwait(false);
-        var result = _Deserialize<T>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
+        using var response = await _httpClient.GetAsync(apiPath, cancellationToken).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        var result = _Deserialize<T>(await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false));
         return result;
     }
 
-    private async Task<ApiResultModel<List<T>>> _GetAllAPIAsync<T>(string apiPath) where T : ISessionAware
+    private async Task<ApiResultModel<List<T>>> _GetAllAPIAsync<T>(string apiPath, CancellationToken cancellationToken) where T : ISessionAware
     {
-        using var response = await _httpClient.GetAsync(apiPath).ConfigureAwait(false);
-        await _EnsureSuccessAsync(response).ConfigureAwait(false);
-        var result = _Deserialize<ApiResultModel<List<T>>>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
+        using var response = await _httpClient.GetAsync(apiPath, cancellationToken).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        var result = _Deserialize<ApiResultModel<List<T>>>(await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false));
 
         return result;
     }
 
-    private async Task<TReturn> _CreateAPIAsync<TReturn, TModel>(string apiPath, TModel apiModel) where TReturn : ISessionAware
-    {
-        var content = _APIModelToContent(apiModel);
-
-        using var response = await _httpClient.PostAsync(apiPath, content).ConfigureAwait(false);
-        await _EnsureSuccessAsync(response).ConfigureAwait(false);
-        var result = _Deserialize<TReturn>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
-        return result;
-    }
-
-    private async Task<TReturn> _UpdateAPIAsync<TReturn, TModel>(string apiPath, Guid id, TModel apiModel) where TReturn : ISessionAware
+    private async Task<TReturn> _CreateAPIAsync<TReturn, TModel>(string apiPath, TModel apiModel, CancellationToken cancellationToken) where TReturn : ISessionAware
     {
         var content = _APIModelToContent(apiModel);
 
-        using var response = await _httpClient.PutAsync($"{apiPath}/{id}", content).ConfigureAwait(false);
-        await _EnsureSuccessAsync(response).ConfigureAwait(false);
-        var result = _Deserialize<TReturn>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
+        using var response = await _httpClient.PostAsync(apiPath, content, cancellationToken).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        var result = _Deserialize<TReturn>(await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false));
         return result;
     }
 
-    private async Task<CipherItemModel> _UpdateItemCollectionsAPIAsync(string apiPath, IEnumerable<Guid> newCollectionIds)
+    private async Task<TReturn> _UpdateAPIAsync<TReturn, TModel>(string apiPath, Guid id, TModel apiModel, CancellationToken cancellationToken) where TReturn : ISessionAware
+    {
+        var content = _APIModelToContent(apiModel);
+
+        using var response = await _httpClient.PutAsync($"{apiPath}/{id}", content, cancellationToken).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        var result = _Deserialize<TReturn>(await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false));
+        return result;
+    }
+
+    private async Task<CipherItemModel> _UpdateItemCollectionsAPIAsync(string apiPath, IEnumerable<Guid> newCollectionIds, CancellationToken cancellationToken)
     {
         var content = _APIModelToContent(new CipherItemUpdateCollectionsRequestAPIModel
         {
             CollectionIds = newCollectionIds.ToList()
         });
 
-        using var response = await _httpClient.PutAsync($"{apiPath}", content).ConfigureAwait(false);
-        await _EnsureSuccessAsync(response).ConfigureAwait(false);
-        var result = _Deserialize<CipherItemUpdateCollectionsResponseAPIModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
+        using var response = await _httpClient.PutAsync($"{apiPath}", content, cancellationToken).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        var result = _Deserialize<CipherItemUpdateCollectionsResponseAPIModel>(await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false));
         return result.Cipher;
     }
 
-    private async Task _MoveTrashAPIAsync(string apiPath)
+    private async Task _MoveTrashAPIAsync(string apiPath, CancellationToken cancellationToken)
     {
-        using var response = await _httpClient.PutAsync($"{apiPath}", null).ConfigureAwait(false);
-        await _EnsureSuccessAsync(response).ConfigureAwait(false);
+        using var response = await _httpClient.PutAsync($"{apiPath}", null, cancellationToken).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task _RestoreAPIAsync(string apiPath)
+    private async Task _RestoreAPIAsync(string apiPath, CancellationToken cancellationToken)
     {
-        using var response = await _httpClient.PutAsync($"{apiPath}", null).ConfigureAwait(false);
-        await _EnsureSuccessAsync(response).ConfigureAwait(false);
+        using var response = await _httpClient.PutAsync($"{apiPath}", null, cancellationToken).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task _DeleteAPIAsync(string apiPath)
+    private async Task _DeleteAPIAsync(string apiPath, CancellationToken cancellationToken)
     {
-        using var response = await _httpClient.DeleteAsync(apiPath).ConfigureAwait(false);
-        await _EnsureSuccessAsync(response).ConfigureAwait(false);
+        using var response = await _httpClient.DeleteAsync(apiPath, cancellationToken).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task _MultiDeleteAPIAsync(string apiPath, IEnumerable<Guid> ids)
+    private async Task _MultiDeleteAPIAsync(string apiPath, IEnumerable<Guid> ids, CancellationToken cancellationToken)
     {
         var apiModel = new MultiDeleteRequestAPIModel
         {
@@ -376,8 +376,8 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
         var content = _APIModelToContent(apiModel);
 
-        using var response = await _httpClient.PutAsync($"{apiPath}/delete", content).ConfigureAwait(false);
-        await _EnsureSuccessAsync(response).ConfigureAwait(false);
+        using var response = await _httpClient.PutAsync($"{apiPath}/delete", content, cancellationToken).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
     }
 
     #endregion
@@ -561,22 +561,22 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         return apiModel;
     }
 
-    public async Task<CipherItemModel> GetCipherItemAsync(Guid id)
+    public async Task<CipherItemModel> GetCipherItemAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _GetAPIAsync<CipherItemModel>($"{_baseUrl}{CiphersApiPath}/{id}").ConfigureAwait(false);
+        return await _GetAPIAsync<CipherItemModel>($"{_baseUrl}{CiphersApiPath}/{id}", cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<List<CipherItemModel>> GetCipherItemsAsync()
+    public async Task<List<CipherItemModel>> GetCipherItemsAsync(CancellationToken cancellationToken = default)
     {
-        return (await _GetAllAPIAsync<CipherItemModel>($"{_baseUrl}{CiphersApiPath}").ConfigureAwait(false)).Data;
+        return (await _GetAllAPIAsync<CipherItemModel>($"{_baseUrl}{CiphersApiPath}", cancellationToken).ConfigureAwait(false)).Data;
     }
 
-    public async Task<AttachmentModel> GetCipherItemAttachmentAsync(Guid id, string attachmentId)
+    public async Task<AttachmentModel> GetCipherItemAttachmentAsync(Guid id, string attachmentId, CancellationToken cancellationToken = default)
     {
-        return await _GetAPIAsync<AttachmentModel>($"{_baseUrl}{CiphersApiPath}/{id}/attachment/{Uri.EscapeDataString(attachmentId)}").ConfigureAwait(false);
+        return await _GetAPIAsync<AttachmentModel>($"{_baseUrl}{CiphersApiPath}/{id}/attachment/{Uri.EscapeDataString(attachmentId)}", cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<AttachmentModel> CreateCipherItemAttachmentAsync(Guid id, string encryptedFileName, string encryptedKey, Stream attachmentStream)
+    public async Task<AttachmentModel> CreateCipherItemAttachmentAsync(Guid id, string encryptedFileName, string encryptedKey, Stream attachmentStream, CancellationToken cancellationToken = default)
     {
         var createAttachmentModel = new CipherItemCreateAttachmentRequestAPIModel
         {
@@ -589,10 +589,10 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         var content = _APIModelToContent(createAttachmentModel);
 
         CreateCipherItemAttachmentResponseAPIResultModel newAttachment;
-        using (var response = await _httpClient.PostAsync($"{_baseUrl}{CiphersApiPath}/{id}/attachment/v2", content).ConfigureAwait(false))
+        using (var response = await _httpClient.PostAsync($"{_baseUrl}{CiphersApiPath}/{id}/attachment/v2", content, cancellationToken).ConfigureAwait(false))
         {
-            await _EnsureSuccessAsync(response).ConfigureAwait(false);
-            newAttachment = _Deserialize<CreateCipherItemAttachmentResponseAPIResultModel>(await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
+            await _EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+            newAttachment = _Deserialize<CreateCipherItemAttachmentResponseAPIResultModel>(await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false));
         }
         try
         {
@@ -603,14 +603,14 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
             form.Add(fileContent, "data", encryptedFileName);
 
-            using var response = await _httpClient.PostAsync($"{_baseUrl}{CiphersApiPath}/{id}/attachment/{Uri.EscapeDataString(newAttachment.AttachmentId)}", form).ConfigureAwait(false);
-            await _EnsureSuccessAsync(response).ConfigureAwait(false);
+            using var response = await _httpClient.PostAsync($"{_baseUrl}{CiphersApiPath}/{id}/attachment/{Uri.EscapeDataString(newAttachment.AttachmentId)}", form, cancellationToken).ConfigureAwait(false);
+            await _EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
         }
         catch
         {
             try
             {
-                await DeleteCipherItemAttachmentAsync(id, newAttachment.AttachmentId).ConfigureAwait(false);
+                await DeleteCipherItemAttachmentAsync(id, newAttachment.AttachmentId, cancellationToken).ConfigureAwait(false);
             }
             catch
             {
@@ -622,33 +622,33 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         return newAttachment.CipherResponse.Attachments.Find(e => e.Id == newAttachment.AttachmentId);
     }
 
-    public async Task DeleteCipherItemAttachmentAsync(Guid id, string attachmentId)
+    public async Task DeleteCipherItemAttachmentAsync(Guid id, string attachmentId, CancellationToken cancellationToken = default)
     {
-        await _DeleteAPIAsync($"{_baseUrl}{CiphersApiPath}/{id}/attachment/{Uri.EscapeDataString(attachmentId)}").ConfigureAwait(false);
+        await _DeleteAPIAsync($"{_baseUrl}{CiphersApiPath}/{id}/attachment/{Uri.EscapeDataString(attachmentId)}", cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<CipherItemModel> CreateCipherItemAsync(CipherItemModel cipherItem)
+    public async Task<CipherItemModel> CreateCipherItemAsync(CipherItemModel cipherItem, CancellationToken cancellationToken = default)
     {
         if (cipherItem.OrganizationId == null)
         {
             switch (cipherItem.ItemType)
             {
-                case CipherItemType.Login     : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemLoginRequestAPIModel>>($"{_baseUrl}{CiphersApiPath}/create", _BuildCreateCipherItemLoginRequest(cipherItem, null)).ConfigureAwait(false);
-                case CipherItemType.SecureNote: return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemSecureNoteRequestAPIModel>>($"{_baseUrl}{CiphersApiPath}/create", _BuildCreateCipherItemSecureNoteRequest(cipherItem, null)).ConfigureAwait(false);
-                case CipherItemType.Card      : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemCardRequestAPIModel>>($"{_baseUrl}{CiphersApiPath}/create", _BuildCreateCipherItemCardRequest(cipherItem, null)).ConfigureAwait(false);
-                case CipherItemType.Identity  : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemIdentityRequestAPIModel>>($"{_baseUrl}{CiphersApiPath}/create", _BuildCreateCipherItemIdentityRequest(cipherItem, null)).ConfigureAwait(false);
-                case CipherItemType.SshKey    : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemSSHKeyRequestAPIModel>>($"{_baseUrl}{CiphersApiPath}/create", _BuildCreateCipherItemSSHKeyRequest(cipherItem, null)).ConfigureAwait(false);
+                case CipherItemType.Login     : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemLoginRequestAPIModel>>($"{_baseUrl}{CiphersApiPath}/create", _BuildCreateCipherItemLoginRequest(cipherItem, null), cancellationToken).ConfigureAwait(false);
+                case CipherItemType.SecureNote: return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemSecureNoteRequestAPIModel>>($"{_baseUrl}{CiphersApiPath}/create", _BuildCreateCipherItemSecureNoteRequest(cipherItem, null), cancellationToken).ConfigureAwait(false);
+                case CipherItemType.Card      : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemCardRequestAPIModel>>($"{_baseUrl}{CiphersApiPath}/create", _BuildCreateCipherItemCardRequest(cipherItem, null), cancellationToken).ConfigureAwait(false);
+                case CipherItemType.Identity  : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemIdentityRequestAPIModel>>($"{_baseUrl}{CiphersApiPath}/create", _BuildCreateCipherItemIdentityRequest(cipherItem, null), cancellationToken).ConfigureAwait(false);
+                case CipherItemType.SshKey    : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemSSHKeyRequestAPIModel>>($"{_baseUrl}{CiphersApiPath}/create", _BuildCreateCipherItemSSHKeyRequest(cipherItem, null), cancellationToken).ConfigureAwait(false);
             }
         }
         else
         {
-            return await CreateOrganizationCipherItemAsync(cipherItem, cipherItem.CollectionsIds).ConfigureAwait(false);
+            return await CreateOrganizationCipherItemAsync(cipherItem, cipherItem.CollectionsIds, cancellationToken).ConfigureAwait(false);
         }
 
         throw new InvalidDataException($"Unhandled cipher item type: {cipherItem.ItemType}");
     }
 
-    public async Task<CipherItemModel> CreateOrganizationCipherItemAsync(CipherItemModel cipherItem, IEnumerable<Guid> collectionIds)
+    public async Task<CipherItemModel> CreateOrganizationCipherItemAsync(CipherItemModel cipherItem, IEnumerable<Guid> collectionIds, CancellationToken cancellationToken = default)
     {
         if (cipherItem.OrganizationId == null)
             throw new InvalidDataException($"{nameof(CipherItemModel.OrganizationId)} must be set.");
@@ -658,56 +658,56 @@ public class DefaultWebClientService : IWebClientService, IDisposable
             
         switch (cipherItem.ItemType)
         {
-            case CipherItemType.Login     : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemLoginRequestAPIModel>>($"{_baseUrl}{CiphersApiPath}/create", _BuildCreateCipherItemLoginRequest(cipherItem, collectionIds)).ConfigureAwait(false);
-            case CipherItemType.SecureNote: return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemSecureNoteRequestAPIModel>>($"{_baseUrl}{CiphersApiPath}/create", _BuildCreateCipherItemSecureNoteRequest(cipherItem, collectionIds)).ConfigureAwait(false);
-            case CipherItemType.Card      : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemCardRequestAPIModel>>($"{_baseUrl}{CiphersApiPath}/create", _BuildCreateCipherItemCardRequest(cipherItem, collectionIds)).ConfigureAwait(false);
-            case CipherItemType.Identity  : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemIdentityRequestAPIModel>>($"{_baseUrl}{CiphersApiPath}/create", _BuildCreateCipherItemIdentityRequest(cipherItem, collectionIds)).ConfigureAwait(false);
-            case CipherItemType.SshKey    : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemSSHKeyRequestAPIModel>>($"{_baseUrl}{CiphersApiPath}/create", _BuildCreateCipherItemSSHKeyRequest(cipherItem, collectionIds)).ConfigureAwait(false);
+            case CipherItemType.Login     : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemLoginRequestAPIModel>>($"{_baseUrl}{CiphersApiPath}/create", _BuildCreateCipherItemLoginRequest(cipherItem, collectionIds), cancellationToken).ConfigureAwait(false);
+            case CipherItemType.SecureNote: return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemSecureNoteRequestAPIModel>>($"{_baseUrl}{CiphersApiPath}/create", _BuildCreateCipherItemSecureNoteRequest(cipherItem, collectionIds), cancellationToken).ConfigureAwait(false);
+            case CipherItemType.Card      : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemCardRequestAPIModel>>($"{_baseUrl}{CiphersApiPath}/create", _BuildCreateCipherItemCardRequest(cipherItem, collectionIds), cancellationToken).ConfigureAwait(false);
+            case CipherItemType.Identity  : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemIdentityRequestAPIModel>>($"{_baseUrl}{CiphersApiPath}/create", _BuildCreateCipherItemIdentityRequest(cipherItem, collectionIds), cancellationToken).ConfigureAwait(false);
+            case CipherItemType.SshKey    : return await _CreateAPIAsync<CipherItemModel, CipherItemCreateRequestAPIModel<CipherItemSSHKeyRequestAPIModel>>($"{_baseUrl}{CiphersApiPath}/create", _BuildCreateCipherItemSSHKeyRequest(cipherItem, collectionIds), cancellationToken).ConfigureAwait(false);
         }
         
         throw new InvalidDataException($"Unhandled cipher item type: {cipherItem.ItemType}");
     }
 
-    public async Task<CipherItemModel> UpdateCipherItemAsync(Guid id, CipherItemModel cipherItem)
+    public async Task<CipherItemModel> UpdateCipherItemAsync(Guid id, CipherItemModel cipherItem, CancellationToken cancellationToken = default)
     {
         switch (cipherItem.ItemType)
         {
-            case CipherItemType.Login     : return await _UpdateAPIAsync<CipherItemModel, CipherItemLoginRequestAPIModel>($"{_baseUrl}{CiphersApiPath}", id, _BuildCipherItemLoginRequest(cipherItem)).ConfigureAwait(false);
-            case CipherItemType.SecureNote: return await _UpdateAPIAsync<CipherItemModel, CipherItemSecureNoteRequestAPIModel>($"{_baseUrl}{CiphersApiPath}", id, _BuildCipherItemSecureNoteRequest(cipherItem)).ConfigureAwait(false);
-            case CipherItemType.Card      : return await _UpdateAPIAsync<CipherItemModel, CipherItemCardRequestAPIModel>($"{_baseUrl}{CiphersApiPath}", id, _BuildCipherItemCardRequest(cipherItem)).ConfigureAwait(false);
-            case CipherItemType.Identity  : return await _UpdateAPIAsync<CipherItemModel, CipherItemIdentityRequestAPIModel>($"{_baseUrl}{CiphersApiPath}", id, _BuildCipherItemIdentityRequest(cipherItem)).ConfigureAwait(false);
-            case CipherItemType.SshKey    : return await _UpdateAPIAsync<CipherItemModel, CipherItemSSHKeyRequestAPIModel>($"{_baseUrl}{CiphersApiPath}", id, _BuildCipherItemSSHKeyRequest(cipherItem)).ConfigureAwait(false);
+            case CipherItemType.Login     : return await _UpdateAPIAsync<CipherItemModel, CipherItemLoginRequestAPIModel>($"{_baseUrl}{CiphersApiPath}", id, _BuildCipherItemLoginRequest(cipherItem), cancellationToken).ConfigureAwait(false);
+            case CipherItemType.SecureNote: return await _UpdateAPIAsync<CipherItemModel, CipherItemSecureNoteRequestAPIModel>($"{_baseUrl}{CiphersApiPath}", id, _BuildCipherItemSecureNoteRequest(cipherItem), cancellationToken).ConfigureAwait(false);
+            case CipherItemType.Card      : return await _UpdateAPIAsync<CipherItemModel, CipherItemCardRequestAPIModel>($"{_baseUrl}{CiphersApiPath}", id, _BuildCipherItemCardRequest(cipherItem), cancellationToken).ConfigureAwait(false);
+            case CipherItemType.Identity  : return await _UpdateAPIAsync<CipherItemModel, CipherItemIdentityRequestAPIModel>($"{_baseUrl}{CiphersApiPath}", id, _BuildCipherItemIdentityRequest(cipherItem), cancellationToken).ConfigureAwait(false);
+            case CipherItemType.SshKey    : return await _UpdateAPIAsync<CipherItemModel, CipherItemSSHKeyRequestAPIModel>($"{_baseUrl}{CiphersApiPath}", id, _BuildCipherItemSSHKeyRequest(cipherItem), cancellationToken).ConfigureAwait(false);
         }
 
         throw new InvalidDataException($"Unhandled cipher item type: {cipherItem.ItemType}");
     }
 
-    public async Task<CipherItemModel> UpdateCipherItemCollectionsAsync(Guid id, List<Guid> newCollections)
+    public async Task<CipherItemModel> UpdateCipherItemCollectionsAsync(Guid id, List<Guid> newCollections, CancellationToken cancellationToken = default)
     {
         if (!(newCollections?.Count > 0))
             throw new InvalidDataException($"New collections ids must not be empty");
 
-        return await _UpdateItemCollectionsAPIAsync($"{_baseUrl}{CiphersApiPath}/{id}/collections_v2", newCollections).ConfigureAwait(false);
+        return await _UpdateItemCollectionsAPIAsync($"{_baseUrl}{CiphersApiPath}/{id}/collections_v2", newCollections, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task MoveToTrashCipherItemAsync(Guid id)
+    public async Task MoveToTrashCipherItemAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        await _MoveTrashAPIAsync($"{_baseUrl}{CiphersApiPath}/{id}/delete").ConfigureAwait(false);
+        await _MoveTrashAPIAsync($"{_baseUrl}{CiphersApiPath}/{id}/delete", cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task RestoreCipherItemAsync(Guid id)
+    public async Task RestoreCipherItemAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        await _RestoreAPIAsync($"{_baseUrl}{CiphersApiPath}/{id}/restore").ConfigureAwait(false);
+        await _RestoreAPIAsync($"{_baseUrl}{CiphersApiPath}/{id}/restore", cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task DeleteCipherItemAsync(Guid id)
+    public async Task DeleteCipherItemAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        await _DeleteAPIAsync($"{_baseUrl}{CiphersApiPath}/{id}").ConfigureAwait(false);
+        await _DeleteAPIAsync($"{_baseUrl}{CiphersApiPath}/{id}", cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task DeleteCipherItemsAsync(IEnumerable<Guid> ids)
+    public async Task DeleteCipherItemsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
     {
-        await _MultiDeleteAPIAsync($"{_baseUrl}{CiphersApiPath}", ids).ConfigureAwait(false);
+        await _MultiDeleteAPIAsync($"{_baseUrl}{CiphersApiPath}", ids, cancellationToken).ConfigureAwait(false);
     }
 
     #endregion
@@ -724,40 +724,40 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         };
     }
 
-    public async Task<FolderItemModel> GetFolderAsync(Guid id)
+    public async Task<FolderItemModel> GetFolderAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _GetAPIAsync<FolderItemModel>($"{_baseUrl}{FoldersApiPath}/{id}").ConfigureAwait(false);
+        return await _GetAPIAsync<FolderItemModel>($"{_baseUrl}{FoldersApiPath}/{id}", cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<List<FolderItemModel>> GetFoldersAsync()
+    public async Task<List<FolderItemModel>> GetFoldersAsync(CancellationToken cancellationToken = default)
     {
-        return (await _GetAllAPIAsync<FolderItemModel>($"{_baseUrl}{FoldersApiPath}").ConfigureAwait(false)).Data;
+        return (await _GetAllAPIAsync<FolderItemModel>($"{_baseUrl}{FoldersApiPath}", cancellationToken).ConfigureAwait(false)).Data;
     }
 
-    public async Task<FolderItemModel> CreateFolderAsync(string encryptedName)
+    public async Task<FolderItemModel> CreateFolderAsync(string encryptedName, CancellationToken cancellationToken = default)
     {
-        return await _CreateAPIAsync<FolderItemModel, FolderRequestAPIModel>($"{_baseUrl}{FoldersApiPath}", _BuildFolderRequestAPIModel(encryptedName)).ConfigureAwait(false);
+        return await _CreateAPIAsync<FolderItemModel, FolderRequestAPIModel>($"{_baseUrl}{FoldersApiPath}", _BuildFolderRequestAPIModel(encryptedName), cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<FolderItemModel> UpdateFolderAsync(Guid id, string encryptedName)
+    public async Task<FolderItemModel> UpdateFolderAsync(Guid id, string encryptedName, CancellationToken cancellationToken = default)
     {
-        return await _UpdateAPIAsync<FolderItemModel, FolderRequestAPIModel>($"{_baseUrl}{FoldersApiPath}", id, _BuildFolderRequestAPIModel(encryptedName)).ConfigureAwait(false);
+        return await _UpdateAPIAsync<FolderItemModel, FolderRequestAPIModel>($"{_baseUrl}{FoldersApiPath}", id, _BuildFolderRequestAPIModel(encryptedName), cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task DeleteFolderAsync(Guid id)
+    public async Task DeleteFolderAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        await _DeleteAPIAsync($"{_baseUrl}{FoldersApiPath}/{id}").ConfigureAwait(false);
+        await _DeleteAPIAsync($"{_baseUrl}{FoldersApiPath}/{id}", cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task DeleteFoldersAsync(IEnumerable<Guid> ids)
+    public async Task DeleteFoldersAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default)
     {
-        await _MultiDeleteAPIAsync($"{_baseUrl}{FoldersApiPath}", ids).ConfigureAwait(false);
+        await _MultiDeleteAPIAsync($"{_baseUrl}{FoldersApiPath}", ids, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task DeleteAllFolderAsync()
+    public async Task DeleteAllFolderAsync(CancellationToken cancellationToken = default)
     {
-        using var response = await _httpClient.DeleteAsync($"{_baseUrl}{FoldersApiPath}/all").ConfigureAwait(false);
-        await _EnsureSuccessAsync(response).ConfigureAwait(false);
+        using var response = await _httpClient.DeleteAsync($"{_baseUrl}{FoldersApiPath}/all", cancellationToken).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
     }
 
     #endregion
@@ -766,7 +766,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
 
     const string OrganizationsApiPath = "/api/organizations";
 
-    public async Task<CollectionItemModel> CreateCollectionAsync(Guid organizationId, string encryptedName, List<UserCollectionPermissionsModel> users, List<UserCollectionPermissionsModel> groups)
+    public async Task<CollectionItemModel> CreateCollectionAsync(Guid organizationId, string encryptedName, List<UserCollectionPermissionsModel> users, List<UserCollectionPermissionsModel> groups, CancellationToken cancellationToken = default)
     {
         var apiModel = new CollectionCreateRequestAPIModel
         {
@@ -775,24 +775,24 @@ public class DefaultWebClientService : IWebClientService, IDisposable
             Groups = groups ?? [],
         };
 
-        return await _CreateAPIAsync<CollectionItemModel, CollectionCreateRequestAPIModel>($"{_baseUrl}{OrganizationsApiPath}/{organizationId}/collections", apiModel).ConfigureAwait(false);
+        return await _CreateAPIAsync<CollectionItemModel, CollectionCreateRequestAPIModel>($"{_baseUrl}{OrganizationsApiPath}/{organizationId}/collections", apiModel, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<List<CollectionItemModel>> GetCollectionsAsync(Guid organizationId)
+    public async Task<List<CollectionItemModel>> GetCollectionsAsync(Guid organizationId, CancellationToken cancellationToken = default)
     {
-        return await _GetAPIAsync<List<CollectionItemModel>>($"{_baseUrl}{OrganizationsApiPath}/{organizationId}/collections/details").ConfigureAwait(false);
+        return await _GetAPIAsync<List<CollectionItemModel>>($"{_baseUrl}{OrganizationsApiPath}/{organizationId}/collections/details", cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task DeleteCollectionAsync(Guid organizationId, Guid collectionId)
+    public async Task DeleteCollectionAsync(Guid organizationId, Guid collectionId, CancellationToken cancellationToken = default)
     {
-        await _DeleteAPIAsync($"{_baseUrl}{OrganizationsApiPath}/{organizationId}/collections/{collectionId}").ConfigureAwait(false);
+        await _DeleteAPIAsync($"{_baseUrl}{OrganizationsApiPath}/{organizationId}/collections/{collectionId}", cancellationToken).ConfigureAwait(false);
     }
 
     #endregion
 
     #region Attachment API
 
-    public async Task<Stream> GetAttachmentAsync(AttachmentModel attachment)
+    public async Task<Stream> GetAttachmentAsync(AttachmentModel attachment, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(attachment);
 
@@ -802,27 +802,27 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         // Only send the bearer token to the Bitwarden server itself. Attachments may be hosted
         // on a third party storage (pre-signed url) which must never receive the user's access token.
         if (Uri.Compare(attachmentUri, _baseUri, UriComponents.SchemeAndServer, UriFormat.SafeUnescaped, StringComparison.OrdinalIgnoreCase) == 0)
-            return await _GetAPIAsync(attachmentUri.AbsoluteUri).ConfigureAwait(false);
+            return await _GetAPIAsync(attachmentUri.AbsoluteUri, cancellationToken).ConfigureAwait(false);
 
         if (attachmentUri.Scheme != Uri.UriSchemeHttps)
             throw new InvalidDataException("Refusing to download an attachment from a non https external url.");
 
-        var response = await AnonymousHttpClient.GetAsync(attachmentUri).ConfigureAwait(false);
-        await _EnsureSuccessAsync(response).ConfigureAwait(false);
-        return await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+        var response = await AnonymousHttpClient.GetAsync(attachmentUri, cancellationToken).ConfigureAwait(false);
+        await _EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
     }
 
     #endregion
 
-    public async Task<ProfileItemModel> GetAccountProfileAsync()
+    public async Task<ProfileItemModel> GetAccountProfileAsync(CancellationToken cancellationToken = default)
     {
-        return await _GetAPIAsync<ProfileItemModel>($"{_baseUrl}/api/accounts/profile").ConfigureAwait(false);
+        return await _GetAPIAsync<ProfileItemModel>($"{_baseUrl}/api/accounts/profile", cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<DatabaseModel> GetDatabaseAsync(bool excludeDomains = true)
+    public async Task<DatabaseModel> GetDatabaseAsync(bool excludeDomains = true, CancellationToken cancellationToken = default)
     {
         var strBool = excludeDomains ? "true" : "false"; // Because bool.ToString() is CamelCase
-        return await _GetAPIAsync<DatabaseModel>($"{_baseUrl}/api/sync?excludeDomains={strBool}").ConfigureAwait(false);
+        return await _GetAPIAsync<DatabaseModel>($"{_baseUrl}/api/sync?excludeDomains={strBool}", cancellationToken).ConfigureAwait(false);
     }
 
     public void Dispose()

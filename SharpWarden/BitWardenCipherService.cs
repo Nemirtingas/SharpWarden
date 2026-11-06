@@ -173,7 +173,7 @@ public static class BitWardenCipherService
     /// The whole ciphertext is authenticated before any plaintext is written to <paramref name="decryptedAttachment"/>,
     /// so <paramref name="attachment"/> must be seekable.
     /// </summary>
-    public static async Task DecryptWithAesCbc256HmacSha256Base64ByteStreamAsync(Stream attachment, Stream decryptedAttachment, byte[] attachmentKey)
+    public static async Task DecryptWithAesCbc256HmacSha256Base64ByteStreamAsync(Stream attachment, Stream decryptedAttachment, byte[] attachmentKey, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(attachment);
         ArgumentNullException.ThrowIfNull(decryptedAttachment);
@@ -210,7 +210,7 @@ public static class BitWardenCipherService
         using (var hmac = IncrementalHash.CreateHMAC(HashAlgorithmName.SHA256, keyMac))
         {
             hmac.AppendData(iv);
-            while ((bytesRead = await attachment.ReadAsync(buffer).ConfigureAwait(false)) > 0)
+            while ((bytesRead = await attachment.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
                 hmac.AppendData(buffer, 0, bytesRead);
 
             if (!CryptographicOperations.FixedTimeEquals(hmac.GetHashAndReset(), macExpected))
@@ -224,13 +224,13 @@ public static class BitWardenCipherService
         using var decryptor = aes.CreateDecryptor(keyEnc, iv);
         await using var cryptoStream = new CryptoStream(decryptedAttachment, decryptor, CryptoStreamMode.Write, leaveOpen: true);
 
-        while ((bytesRead = await attachment.ReadAsync(buffer).ConfigureAwait(false)) > 0)
-            await cryptoStream.WriteAsync(buffer.AsMemory(0, bytesRead)).ConfigureAwait(false);
+        while ((bytesRead = await attachment.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
+            await cryptoStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
 
-        await cryptoStream.FlushFinalBlockAsync().ConfigureAwait(false);
+        await cryptoStream.FlushFinalBlockAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    public static async Task EncryptWithAesCbc256HmacSha256Base64ByteStreamAsync(Stream input, Stream output, byte[] attachmentKey)
+    public static async Task EncryptWithAesCbc256HmacSha256Base64ByteStreamAsync(Stream input, Stream output, byte[] attachmentKey, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(input);
         ArgumentNullException.ThrowIfNull(output);
@@ -246,10 +246,10 @@ public static class BitWardenCipherService
 
         output.WriteByte((byte)BitWardenCipherType.AesCbc256HmacSha256B64);
 
-        await output.WriteAsync(iv).ConfigureAwait(false);
+        await output.WriteAsync(iv, cancellationToken).ConfigureAwait(false);
 
         long macPosition = output.Position;
-        await output.WriteAsync(new byte[MacSize]).ConfigureAwait(false); // Placeholder
+        await output.WriteAsync(new byte[MacSize], cancellationToken).ConfigureAwait(false); // Placeholder
 
         using var hmac = new HMACSHA256(keyMac);
         hmac.TransformBlock(iv, 0, iv.Length, null, 0);
@@ -260,15 +260,15 @@ public static class BitWardenCipherService
         {
             byte[] buffer = new byte[StreamBufferSize];
             int bytesRead;
-            while ((bytesRead = await input.ReadAsync(buffer).ConfigureAwait(false)) > 0)
-                await cryptoStream.WriteAsync(buffer.AsMemory(0, bytesRead)).ConfigureAwait(false);
+            while ((bytesRead = await input.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
+                await cryptoStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
         }
 
         hmac.TransformFinalBlock([], 0, 0);
 
         var endPosition = output.Position;
         output.Position = macPosition;
-        await output.WriteAsync(hmac.Hash.AsMemory(0, MacSize)).ConfigureAwait(false);
+        await output.WriteAsync(hmac.Hash.AsMemory(0, MacSize), cancellationToken).ConfigureAwait(false);
         output.Position = endPosition;
     }
 
