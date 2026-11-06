@@ -121,6 +121,16 @@ public sealed class BitWardenCipherServiceTest
     }
 
     [TestMethod]
+    public async Task AttachmentEncryptionCanBeCancelled()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => BitWardenCipherService.EncryptWithAesCbc256HmacSha256Base64ByteStreamAsync(
+            new MemoryStream(new byte[1000]), new MemoryStream(), RandomNumberGenerator.GetBytes(64), cts.Token));
+    }
+
+    [TestMethod]
     public void RsaRoundTrip()
     {
         using var rsa = RSA.Create(2048);

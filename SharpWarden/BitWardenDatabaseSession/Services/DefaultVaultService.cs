@@ -51,13 +51,13 @@ public class DefaultVaultService : IVaultService
         return _database;
     }
 
-    public async Task DecryptAttachmentAsync(Stream cryptedAttachment, byte[] key, Stream output)
+    public async Task DecryptAttachmentAsync(Stream cryptedAttachment, byte[] key, Stream output, CancellationToken cancellationToken = default)
     {
-        await BitWardenCipherService.DecryptWithAesCbc256HmacSha256Base64ByteStreamAsync(cryptedAttachment, output, key).ConfigureAwait(false);
+        await BitWardenCipherService.DecryptWithAesCbc256HmacSha256Base64ByteStreamAsync(cryptedAttachment, output, key, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task EncryptAttachmentAsync(Stream clearAttachment, byte[] key, Stream output)
+    public async Task EncryptAttachmentAsync(Stream clearAttachment, byte[] key, Stream output, CancellationToken cancellationToken = default)
     {
-        await BitWardenCipherService.EncryptWithAesCbc256HmacSha256Base64ByteStreamAsync(clearAttachment, output, key).ConfigureAwait(false);
+        await BitWardenCipherService.EncryptWithAesCbc256HmacSha256Base64ByteStreamAsync(clearAttachment, output, key, cancellationToken).ConfigureAwait(false);
     }
 }

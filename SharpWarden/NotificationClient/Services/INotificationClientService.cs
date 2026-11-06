@@ -14,5 +14,5 @@ public interface INotificationClientService
     event Func<PushNotificationBaseModel, Task> OnPushNotificationAsyncReceived;
     void ResetEventSubscribers();
     Task StartAsync(CancellationToken cancellationToken);
-    Task StopAsync();
+    Task StopAsync(CancellationToken cancellationToken = default);
 }
