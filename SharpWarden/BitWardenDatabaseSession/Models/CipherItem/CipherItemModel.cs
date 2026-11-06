@@ -102,6 +102,9 @@ public class CipherItemModel : ISessionAware
     [JsonProperty("deletedDate")]
     public DateTime? DeletedDate { get; set; }
 
+    [JsonProperty("archivedDate")]
+    public DateTime? ArchivedDate { get; set; }
+
     [JsonProperty("edit")]
     public bool Edit { get; set; }
 

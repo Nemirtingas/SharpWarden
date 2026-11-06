@@ -48,6 +48,12 @@ public abstract class CipherItemBaseRequestAPIModel
     [JsonProperty("favorite")]
     public bool Favorite { get; set; }
 
+    /// <summary>
+    /// Must be sent back on update: the server unarchives the cipher when it is missing.
+    /// </summary>
+    [JsonProperty("archivedDate")]
+    public DateTime? ArchivedDate { get; set; }
+
     [JsonProperty("lastKnownRevisionDate")]
     public DateTime? LastKnownRevisionDate { get; set; }
 

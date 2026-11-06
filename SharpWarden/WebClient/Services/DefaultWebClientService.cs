@@ -386,6 +386,7 @@ public class DefaultWebClientService : IWebClientService, IDisposable
         apiModel.OrganizationId = itemModel.OrganizationId;
         apiModel.EncryptedFor = UserId;
         apiModel.Key = itemModel.Key;
+        apiModel.ArchivedDate = itemModel.ArchivedDate;
         apiModel.Fields = itemModel.Fields == null ? null : new List<CustomFieldAPIModel>(itemModel.Fields.Select(e => new CustomFieldAPIModel
         {
             Type = e.Type,

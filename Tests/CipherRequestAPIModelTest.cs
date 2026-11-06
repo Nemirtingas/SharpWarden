@@ -22,4 +22,15 @@ public sealed class CipherRequestAPIModelTest
         StringAssert.Contains(json, $"\"encryptedFor\":\"{userId}\"");
         StringAssert.Contains(json, "\"key\":\"2.key\"");
     }
+
+    [TestMethod]
+    public void CipherRequestSerializesArchivedDate()
+    {
+        var json = JsonConvert.SerializeObject(new CipherItemSecureNoteRequestAPIModel
+        {
+            ArchivedDate = new DateTime(2026, 11, 6, 12, 30, 0, DateTimeKind.Utc),
+        });
+
+        StringAssert.Contains(json, "\"archivedDate\":\"2026-11-06T12:30:00Z\"");
+    }
 }
