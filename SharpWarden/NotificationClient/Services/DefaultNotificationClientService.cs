@@ -30,9 +30,13 @@ public class DefaultNotificationClientService : INotificationClientService, IDis
 
     public async Task StartAsync(CancellationToken cancellationToken = default)
     {
+        // Starting twice would replace the connection without closing it, leaving it open forever.
+        if (_hubConnection != null)
+            throw new InvalidOperationException("The notification client is already started. Call " + nameof(StopAsync) + " first.");
+
         var url = $"{_baseUrl}/hub";
 
-        _hubConnection = new HubConnectionBuilder()
+        var hubConnection = new HubConnectionBuilder()
             .WithUrl(url, options =>
             {
                 options.AccessTokenProvider = () => Task.FromResult(_webClientService.GetWebSession().AccessToken);
@@ -48,7 +52,7 @@ public class DefaultNotificationClientService : INotificationClientService, IDis
             })
             .Build();
 
-        _hubConnection.On<PushNotificationBaseModel>(
+        hubConnection.On<PushNotificationBaseModel>(
             "ReceiveMessage",
             async (message) =>
             {
@@ -139,7 +143,18 @@ public class DefaultNotificationClientService : INotificationClientService, IDis
                 await _RaisePushNotificationAsync(message).ConfigureAwait(false);
             });
 
-        await _hubConnection.StartAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await hubConnection.StartAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Do not keep a connection that never started, so StartAsync can be retried.
+            await hubConnection.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
+
+        _hubConnection = hubConnection;
     }
 
     private async Task _RaisePushNotificationAsync(PushNotificationBaseModel message)
